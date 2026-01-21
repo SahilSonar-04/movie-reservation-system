@@ -53,10 +53,10 @@ connectDB();
 setInterval(releaseExpiredLocks, LOCK_TIME_MS);
 
 // General API
-app.use("/api", generalLimiter);
+// app.use("/api", generalLimiter);
 
 // Auth
-app.use("/api/auth", authLimiter);
+// app.use("/api/auth", authLimiter);
 
 // Admin
 app.use("/api/admin", adminLimiter);
