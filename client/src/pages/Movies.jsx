@@ -24,8 +24,8 @@ function Movies() {
       try {
         setError("");
         const [moviesRes, locationsRes] = await Promise.all([
-          api.get("/movies"),
-          api.get("/theaters/locations"),
+          api.get("/api/movies"),
+          api.get("/api/theaters/locations"),
         ]);
         // ✅ FIX: Access movies property from response
         const moviesData = moviesRes.data.movies || moviesRes.data;
