@@ -1,7 +1,10 @@
 import { useEffect, useState, useRef } from "react";
+import { Elements } from "@stripe/react-stripe-js";
 import api from "../services/api";
 import SeatGrid from "../components/SeatGrid";
+import CheckoutForm from "../components/CheckoutForm";
 import { useAuth } from "../context/AuthContext";
+import { stripePromise } from "../config/stripe.config";
 
 function Seats({ show, onBack }) {
   const { user } = useAuth();
@@ -9,6 +12,9 @@ function Seats({ show, onBack }) {
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPayment, setShowPayment] = useState(false);
+  const [clientSecret, setClientSecret] = useState("");
+  const [paymentIntentId, setPaymentIntentId] = useState("");
   const selectedSeatsRef = useRef([]);
   const pricePerSeat = show.price;
 
@@ -50,7 +56,7 @@ function Seats({ show, onBack }) {
   };
 
   const toggleSeat = async (seat) => {
-    if (loading) return;
+    if (loading || showPayment) return;
 
     const isSelected = selectedSeats.includes(seat._id);
 
@@ -86,7 +92,7 @@ function Seats({ show, onBack }) {
     }
   };
 
-  const confirmBooking = async () => {
+  const initiatePayment = async () => {
     if (selectedSeats.length === 0) {
       setError("Please select at least one seat");
       return;
@@ -96,19 +102,18 @@ function Seats({ show, onBack }) {
     setError("");
 
     try {
-      await api.post("/bookings/confirm", {
+      // Create payment intent
+      const response = await api.post("/payments/create-payment-intent", {
         seatIds: selectedSeats,
         showId: show._id,
-        totalAmount: selectedSeats.length * pricePerSeat,
       });
 
-      alert("Booking confirmed successfully!");
-      setSelectedSeats([]);
-      selectedSeatsRef.current = [];
-      onBack();
+      setClientSecret(response.data.clientSecret);
+      setPaymentIntentId(response.data.paymentIntentId);
+      setShowPayment(true);
     } catch (err) {
-      const errorMsg = err.response?.data?.message || err.message || "Booking failed";
-      setError(`${errorMsg}. Your locks may have expired. Please try again.`);
+      const errorMsg = err.response?.data?.message || err.message || "Failed to initiate payment";
+      setError(errorMsg);
       setSelectedSeats([]);
       selectedSeatsRef.current = [];
       await fetchSeats();
@@ -117,8 +122,23 @@ function Seats({ show, onBack }) {
     }
   };
 
+  const handlePaymentSuccess = async (booking) => {
+    setShowPayment(false);
+    setSelectedSeats([]);
+    selectedSeatsRef.current = [];
+    alert("Booking confirmed successfully! Payment completed.");
+    onBack();
+  };
+
+  const handlePaymentCancel = async () => {
+    setShowPayment(false);
+    setClientSecret("");
+    setPaymentIntentId("");
+    // Keep seats locked, user can try payment again
+  };
+
   const handleBack = async () => {
-    if (selectedSeats.length > 0) {
+    if (selectedSeats.length > 0 && !showPayment) {
       await unlockSeats(selectedSeats);
     }
     setSelectedSeats([]);
@@ -127,19 +147,93 @@ function Seats({ show, onBack }) {
   };
 
   const showDate = new Date(show.startTime);
+  const totalAmount = selectedSeats.length * pricePerSeat;
+
+  // Payment Modal
+  if (showPayment && clientSecret) {
+    return (
+      <div style={{ maxWidth: "600px", margin: "0 auto" }}>
+        {/* Header */}
+        <div
+          style={{
+            background: "#fff",
+            padding: "24px",
+            borderRadius: "12px",
+            marginBottom: "24px",
+            border: "1px solid #e5e7eb",
+            boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
+          }}
+        >
+          <h1 style={{ margin: "0 0 8px 0", fontSize: "24px", fontWeight: "700", color: "#111827" }}>
+            Complete Payment
+          </h1>
+          <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>
+            {show.movie?.title} at {show.theater?.name}
+          </p>
+        </div>
+
+        {/* Stripe Payment Form */}
+        <div
+          style={{
+            background: "#fff",
+            padding: "24px",
+            borderRadius: "12px",
+            border: "1px solid #e5e7eb",
+            boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
+          }}
+        >
+          <Elements
+            stripe={stripePromise}
+            options={{
+              clientSecret,
+              appearance: {
+                theme: "stripe",
+                variables: {
+                  colorPrimary: "#dc2626",
+                },
+              },
+            }}
+          >
+            <CheckoutForm
+              amount={totalAmount}
+              seatCount={selectedSeats.length}
+              onSuccess={handlePaymentSuccess}
+              onCancel={handlePaymentCancel}
+            />
+          </Elements>
+        </div>
+
+        {/* Security Notice */}
+        <div
+          style={{
+            marginTop: "24px",
+            padding: "16px",
+            background: "#f0fdf4",
+            border: "1px solid #bbf7d0",
+            borderRadius: "8px",
+            fontSize: "13px",
+            color: "#166534",
+          }}
+        >
+          <strong>Your seats are locked</strong> for the next 5 minutes while you complete payment.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
       {/* Back Button */}
       <button
         onClick={handleBack}
+        disabled={showPayment}
         style={{
           padding: "10px 20px",
           marginBottom: "24px",
           background: "transparent",
           border: "1px solid #e5e7eb",
           borderRadius: "8px",
-          cursor: "pointer",
+          cursor: showPayment ? "not-allowed" : "pointer",
           fontSize: "14px",
           fontWeight: "500",
           color: "#6b7280",
@@ -147,14 +241,19 @@ function Seats({ show, onBack }) {
           alignItems: "center",
           gap: "8px",
           transition: "all 0.2s",
+          opacity: showPayment ? 0.5 : 1,
         }}
         onMouseEnter={(e) => {
-          e.target.style.borderColor = "#dc2626";
-          e.target.style.color = "#dc2626";
+          if (!showPayment) {
+            e.target.style.borderColor = "#dc2626";
+            e.target.style.color = "#dc2626";
+          }
         }}
         onMouseLeave={(e) => {
-          e.target.style.borderColor = "#e5e7eb";
-          e.target.style.color = "#6b7280";
+          if (!showPayment) {
+            e.target.style.borderColor = "#e5e7eb";
+            e.target.style.color = "#6b7280";
+          }
         }}
       >
         <svg
@@ -349,12 +448,12 @@ function Seats({ show, onBack }) {
               Selected Seats: {selectedSeats.length} / 10
             </div>
             <div style={{ fontSize: "24px", fontWeight: "700", color: "#111827" }}>
-              Total: ₹{selectedSeats.length * pricePerSeat}
+              Total: ₹{totalAmount}
             </div>
           </div>
 
           <button
-            onClick={confirmBooking}
+            onClick={initiatePayment}
             disabled={loading || selectedSeats.length === 0}
             style={{
               padding: "14px 32px",
@@ -381,13 +480,13 @@ function Seats({ show, onBack }) {
               }
             }}
           >
-            {loading ? "Processing..." : "Confirm Booking"}
+            {loading ? "Processing..." : "Proceed to Payment"}
           </button>
         </div>
 
         {selectedSeats.length > 0 && (
           <div style={{ fontSize: "12px", color: "#6b7280", textAlign: "center" }}>
-            Please complete your booking within 5 minutes to keep your seats locked
+            Seats will be locked for 5 minutes during payment
           </div>
         )}
       </div>

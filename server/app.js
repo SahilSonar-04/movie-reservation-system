@@ -23,6 +23,8 @@ import {
   bookingLimiter,
   seatLockLimiter,
 } from "./middleware/rateLimit.middleware.js";
+import paymentRoutes from "./routes/payment.routes.js";
+
 
 const app = express();
 
@@ -53,10 +55,10 @@ connectDB();
 setInterval(releaseExpiredLocks, LOCK_TIME_MS);
 
 // General API
-// app.use("/api", generalLimiter);
+app.use("/api", generalLimiter);
 
 // Auth
-// app.use("/api/auth", authLimiter);
+app.use("/api/auth", authLimiter);
 
 // Admin
 app.use("/api/admin", adminLimiter);
@@ -78,6 +80,7 @@ app.use("/api/seats", lockRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/theaters", theaterRoutes);
+app.use("/api/payments", paymentRoutes);
 
 // Health check
 app.get("/api/health", async (req, res) => {

@@ -27,8 +27,17 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       enum: ["CONFIRMED", "CANCELLED"],
       default: "CONFIRMED",
-    }
-,
+    },
+    // NEW FIELDS FOR PAYMENT
+    paymentIntentId: {
+      type: String,
+      required: false,
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["PENDING", "PAID", "FAILED", "REFUNDED"],
+      default: "PENDING",
+    },
   },
   { timestamps: true }
 );

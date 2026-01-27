@@ -4,6 +4,7 @@ import Show from "../models/show.model.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { LOCK_TIME_MS } from "../config/lock.config.js";
 import { withTransaction } from "../utils/transaction.utils.js";
+import stripe from "../config/stripe.config.js";
 
 export const confirmBooking = asyncHandler(async (req, res) => {
   const { seatIds, showId, totalAmount } = req.body;
@@ -144,6 +145,24 @@ export const cancelBooking = asyncHandler(async (req, res) => {
       .json({ message: "Cannot cancel booking for past shows" });
   }
 
+  // Process refund if payment was made
+  if (booking.paymentIntentId && booking.paymentStatus === "PAID") {
+    try {
+      const refund = await stripe.refunds.create({
+        payment_intent: booking.paymentIntentId,
+        reason: "requested_by_customer",
+      });
+
+      booking.paymentStatus = "REFUNDED";
+      console.log(`Refund processed: ${refund.id}`);
+    } catch (error) {
+      console.error("Refund failed:", error);
+      return res.status(500).json({ 
+        message: "Failed to process refund. Please contact support." 
+      });
+    }
+  }
+
   // Use transaction for atomic cancellation
   await withTransaction(async (session) => {
     const seatIds = booking.seats.map((seat) => seat._id);
@@ -161,7 +180,10 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     await booking.save({ session });
   });
 
-  res.json({ message: "Booking cancelled successfully" });
+  res.json({ 
+    message: "Booking cancelled successfully",
+    refundStatus: booking.paymentStatus === "REFUNDED" ? "Refund processed" : "No refund needed"
+  });
 });
 
 export const getMyBookings = asyncHandler(async (req, res) => {
