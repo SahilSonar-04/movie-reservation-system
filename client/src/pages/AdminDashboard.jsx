@@ -11,7 +11,6 @@ function AdminDashboard() {
 
   const showsSectionRef = useRef(null);
 
-  // Movie form
   const [movieForm, setMovieForm] = useState({
     title: "",
     description: "",
@@ -21,7 +20,6 @@ function AdminDashboard() {
     genre: "",
   });
 
-  // ✅ Theater form
   const [theaterForm, setTheaterForm] = useState({
     name: "",
     location: "",
@@ -29,7 +27,6 @@ function AdminDashboard() {
     amenities: "",
   });
 
-  // ✅ Updated Show form - now includes theater
   const [showForm, setShowForm] = useState({
     movieId: "",
     theaterId: "",
@@ -38,7 +35,6 @@ function AdminDashboard() {
     price: "",
   });
 
-  /* ================= FETCH DATA ================= */
   const fetchStats = async () => {
     try {
       const res = await api.get("/admin/stats");
@@ -51,7 +47,6 @@ function AdminDashboard() {
   const fetchMovies = async () => {
     try {
       const res = await api.get("/movies");
-      // ✅ FIX: Access movies property from response
       setMovies(res.data.movies || res.data);
     } catch (err) {
       console.error("Failed to fetch movies", err);
@@ -82,7 +77,6 @@ function AdminDashboard() {
     fetchTheaters();
   }, []);
 
-  /* ================= THEATERS ================= */
   const addTheater = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -95,15 +89,14 @@ function AdminDashboard() {
       };
 
       if (theaterForm.amenities.trim()) {
-        theaterData.amenities = theaterForm.amenities
-          .split(",")
-          .map((a) => a.trim());
+        theaterData.amenities = theaterForm.amenities.split(",").map((a) => a.trim());
       }
 
       await api.post("/theaters", theaterData);
       alert("Theater added successfully");
       setTheaterForm({ name: "", location: "", address: "", amenities: "" });
       fetchTheaters();
+      fetchStats();
     } catch (err) {
       const message = err.response?.data?.message || "Failed to add theater";
       alert(message);
@@ -114,7 +107,7 @@ function AdminDashboard() {
 
   const deleteTheater = async (theaterId, theaterName) => {
     const confirmed = window.confirm(
-      `Delete "${theaterName}"?\n\nThis will delete all shows, seats, and cancelled bookings for this theater.\n\n⚠️ Cannot be undone!`
+      `Delete "${theaterName}"?\n\nThis will delete all shows, seats, and cancelled bookings for this theater.\n\nThis action cannot be undone!`
     );
 
     if (!confirmed) return;
@@ -130,7 +123,6 @@ function AdminDashboard() {
     }
   };
 
-  /* ================= MOVIES ================= */
   const addMovie = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -173,7 +165,7 @@ function AdminDashboard() {
 
   const deleteMovie = async (movieId, movieTitle) => {
     const confirmed = window.confirm(
-      `Delete "${movieTitle}"?\n\nThis will delete all shows, seats, and cancelled bookings.\n\n⚠️ Cannot be undone!`
+      `Delete "${movieTitle}"?\n\nThis will delete all shows, seats, and cancelled bookings.\n\nThis action cannot be undone!`
     );
 
     if (!confirmed) return;
@@ -193,7 +185,6 @@ function AdminDashboard() {
     }
   };
 
-  /* ================= SHOWS ================= */
   const addShow = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -235,7 +226,7 @@ function AdminDashboard() {
     const confirmed = window.confirm(
       `Delete this show?\n\nTheater: ${showDetails.theater.name}\nScreen: ${showDetails.screen}\nTime: ${new Date(
         showDetails.startTime
-      ).toLocaleString()}\n\n⚠️ This will delete all seats and cancelled bookings!`
+      ).toLocaleString()}\n\nThis will delete all seats and cancelled bookings!`
     );
 
     if (!confirmed) return;
@@ -253,264 +244,658 @@ function AdminDashboard() {
     }
   };
 
-  const viewShowsForMovie = (movieId) => {
-    setSelectedMovieForShows(movieId);
-    fetchShows(movieId);
-    setTimeout(() => {
-      showsSectionRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }, 100);
-  };
+const viewShowsForMovie = (movieId) => {
+  setSelectedMovieForShows(movieId);
+  fetchShows(movieId);
+
+  setTimeout(() => {
+    if (!showsSectionRef.current) return;
+
+    const rect = showsSectionRef.current.getBoundingClientRect();
+    const elementTop = rect.top + window.pageYOffset;
+    const elementHeight = rect.height;
+    const viewportHeight = window.innerHeight;
+
+    // 🎯 This controls how centered it feels
+    const offset = (viewportHeight / 2) - (elementHeight / 3);
+
+    window.scrollTo({
+      top: elementTop - offset,
+      behavior: "smooth",
+    });
+  }, 100);
+};
+
 
   return (
     <div style={{ maxWidth: "1200px" }}>
-      <h2>Admin Dashboard</h2>
+      <div style={{ marginBottom: "32px" }}>
+        <h1 style={{ margin: "0 0 8px 0", fontSize: "32px", fontWeight: "700", color: "#111827" }}>
+          Admin Dashboard
+        </h1>
+        <p style={{ color: "#6b7280", margin: 0, fontSize: "15px" }}>
+          Manage movies, theaters, and shows
+        </p>
+      </div>
 
       {/* ================= ANALYTICS ================= */}
       {stats && (
-        <div style={{ marginBottom: "32px" }}>
-          <h3>Analytics</h3>
+        <div style={{ marginBottom: "40px" }}>
+          <h2 style={{ margin: "0 0 20px 0", fontSize: "24px", fontWeight: "600", color: "#111827" }}>
+            Analytics
+          </h2>
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
               gap: "16px",
             }}
           >
-            <div style={{ padding: "16px", background: "#f5f5f5", borderRadius: "8px" }}>
-              <p style={{ margin: 0, color: "#666", fontSize: "14px" }}>Total Revenue</p>
-              <p style={{ margin: "8px 0 0 0", fontSize: "24px", fontWeight: "bold" }}>
-                ₹{stats.totalRevenue}
-              </p>
+            <div
+              style={{
+                background: "#fff",
+                padding: "24px",
+                borderRadius: "12px",
+                border: "1px solid #e5e7eb",
+                boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
+              }}
+            >
+              <div style={{ fontSize: "13px", color: "#6b7280", marginBottom: "8px", fontWeight: "500", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Total Movies
+              </div>
+              <div style={{ fontSize: "36px", fontWeight: "700", color: "#dc2626" }}>
+                {stats.totalMovies || 0}
+              </div>
             </div>
-            <div style={{ padding: "16px", background: "#f5f5f5", borderRadius: "8px" }}>
-              <p style={{ margin: 0, color: "#666", fontSize: "14px" }}>Total Bookings</p>
-              <p style={{ margin: "8px 0 0 0", fontSize: "24px", fontWeight: "bold" }}>
-                {stats.totalBookings}
-              </p>
+
+            <div
+              style={{
+                background: "#fff",
+                padding: "24px",
+                borderRadius: "12px",
+                border: "1px solid #e5e7eb",
+                boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
+              }}
+            >
+              <div style={{ fontSize: "13px", color: "#6b7280", marginBottom: "8px", fontWeight: "500", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Total Theaters
+              </div>
+              <div style={{ fontSize: "36px", fontWeight: "700", color: "#dc2626" }}>
+                {stats.totalTheaters || 0}
+              </div>
             </div>
-            <div style={{ padding: "16px", background: "#f5f5f5", borderRadius: "8px" }}>
-              <p style={{ margin: 0, color: "#666", fontSize: "14px" }}>Cancelled</p>
-              <p style={{ margin: "8px 0 0 0", fontSize: "24px", fontWeight: "bold" }}>
-                {stats.cancelledBookings}
-              </p>
+
+            <div
+              style={{
+                background: "#fff",
+                padding: "24px",
+                borderRadius: "12px",
+                border: "1px solid #e5e7eb",
+                boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
+              }}
+            >
+              <div style={{ fontSize: "13px", color: "#6b7280", marginBottom: "8px", fontWeight: "500", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Total Shows
+              </div>
+              <div style={{ fontSize: "36px", fontWeight: "700", color: "#dc2626" }}>
+                {stats.totalShows || 0}
+              </div>
             </div>
-            <div style={{ padding: "16px", background: "#f5f5f5", borderRadius: "8px" }}>
-              <p style={{ margin: 0, color: "#666", fontSize: "14px" }}>Cancel Rate</p>
-              <p style={{ margin: "8px 0 0 0", fontSize: "24px", fontWeight: "bold" }}>
-                {stats.cancellationRate.toFixed(1)}%
-              </p>
+
+            <div
+              style={{
+                background: "#fff",
+                padding: "24px",
+                borderRadius: "12px",
+                border: "1px solid #e5e7eb",
+                boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
+              }}
+            >
+              <div style={{ fontSize: "13px", color: "#6b7280", marginBottom: "8px", fontWeight: "500", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Total Bookings
+              </div>
+              <div style={{ fontSize: "36px", fontWeight: "700", color: "#dc2626" }}>
+                {stats.totalBookings || 0}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: "#fff",
+                padding: "24px",
+                borderRadius: "12px",
+                border: "1px solid #e5e7eb",
+                boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
+              }}
+            >
+              <div style={{ fontSize: "13px", color: "#6b7280", marginBottom: "8px", fontWeight: "500", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Total Revenue
+              </div>
+              <div style={{ fontSize: "36px", fontWeight: "700", color: "#10b981" }}>
+                ₹{stats.totalRevenue || 0}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: "#fff",
+                padding: "24px",
+                borderRadius: "12px",
+                border: "1px solid #e5e7eb",
+                boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
+              }}
+            >
+              <div style={{ fontSize: "13px", color: "#6b7280", marginBottom: "8px", fontWeight: "500", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Cancellation Rate
+              </div>
+              <div style={{ fontSize: "36px", fontWeight: "700", color: "#f59e0b" }}>
+                {stats.cancellationRate ? `${stats.cancellationRate}%` : "0%"}
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      <hr style={{ margin: "32px 0" }} />
-
-      {/* ================= MANAGE THEATERS ================= */}
-      <div style={{ marginBottom: "32px" }}>
-        <h3>🎭 Manage Theaters</h3>
-
-        {theaters.length === 0 ? (
-          <p style={{ color: "#666" }}>No theaters yet. Add one below!</p>
-        ) : (
-          <div style={{ marginBottom: "24px" }}>
-            {theaters.map((theater) => (
-              <div
-                key={theater._id}
+      {/* ================= ADD MOVIE FIRST ================= */}
+      <div style={{ marginBottom: "40px" }}>
+        <h2 style={{ margin: "0 0 20px 0", fontSize: "24px", fontWeight: "600", color: "#111827" }}>
+          Add New Movie
+        </h2>
+        <div
+          style={{
+            background: "#fff",
+            padding: "24px",
+            borderRadius: "12px",
+            border: "1px solid #e5e7eb",
+            boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
+          }}
+        >
+          <form onSubmit={addMovie} style={{ maxWidth: "700px" }}>
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>
+                Movie Title *
+              </label>
+              <input
+                placeholder="Enter movie title"
+                value={movieForm.title}
+                onChange={(e) => setMovieForm({ ...movieForm, title: e.target.value })}
+                required
                 style={{
-                  border: "1px solid #ddd",
-                  padding: "12px",
-                  marginBottom: "12px",
+                  width: "100%",
+                  padding: "12px 14px",
+                  border: "1px solid #e5e7eb",
                   borderRadius: "8px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
+                  fontSize: "14px",
+                  outline: "none",
                 }}
-              >
-                <div>
-                  <h4 style={{ margin: "0 0 4px 0" }}>🎬 {theater.name}</h4>
-                  <p style={{ margin: "4px 0", fontSize: "14px", color: "#666" }}>
-                    📍 {theater.location}
-                    {theater.address && ` - ${theater.address}`}
-                  </p>
-                  {theater.amenities && theater.amenities.length > 0 && (
-                    <p style={{ margin: "4px 0", fontSize: "12px", color: "#999" }}>
-                      ✨ {theater.amenities.join(", ")}
-                    </p>
-                  )}
-                </div>
-                <button
-                  onClick={() => deleteTheater(theater._id, theater.name)}
-                  style={{
-                    padding: "8px 16px",
-                    background: "#ff4d4f",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
-                >
-                  Delete
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+              />
+            </div>
 
-        <h4>Add New Theater</h4>
-        <form onSubmit={addTheater} style={{ maxWidth: "500px" }}>
-          <input
-            placeholder="Theater Name (e.g., PVR Phoenix Mall) *"
-            value={theaterForm.name}
-            onChange={(e) => setTheaterForm({ ...theaterForm, name: e.target.value })}
-            required
-            style={{
-              width: "100%",
-              padding: "8px",
-              marginBottom: "8px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-            }}
-          />
-          <input
-            placeholder="City/Location (e.g., Mumbai) *"
-            value={theaterForm.location}
-            onChange={(e) =>
-              setTheaterForm({ ...theaterForm, location: e.target.value })
-            }
-            required
-            style={{
-              width: "100%",
-              padding: "8px",
-              marginBottom: "8px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-            }}
-          />
-          <input
-            placeholder="Full Address (optional)"
-            value={theaterForm.address}
-            onChange={(e) =>
-              setTheaterForm({ ...theaterForm, address: e.target.value })
-            }
-            style={{
-              width: "100%",
-              padding: "8px",
-              marginBottom: "8px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-            }}
-          />
-          <input
-            placeholder="Amenities (comma separated: 3D, IMAX, Parking)"
-            value={theaterForm.amenities}
-            onChange={(e) =>
-              setTheaterForm({ ...theaterForm, amenities: e.target.value })
-            }
-            style={{
-              width: "100%",
-              padding: "8px",
-              marginBottom: "8px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-            }}
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              padding: "10px 20px",
-              background: "#1890ff",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: loading ? "not-allowed" : "pointer",
-            }}
-          >
-            {loading ? "Adding..." : "Add Theater"}
-          </button>
-        </form>
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>
+                Description
+              </label>
+              <textarea
+                placeholder="Enter movie description"
+                value={movieForm.description}
+                onChange={(e) => setMovieForm({ ...movieForm, description: e.target.value })}
+                rows="3"
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  fontFamily: "inherit",
+                  outline: "none",
+                  resize: "vertical",
+                }}
+              />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+              <div>
+                <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>
+                  Duration (minutes) *
+                </label>
+                <input
+                  type="number"
+                  placeholder="120"
+                  value={movieForm.duration}
+                  onChange={(e) => setMovieForm({ ...movieForm, duration: e.target.value })}
+                  required
+                  style={{
+                    width: "100%",
+                    padding: "12px 14px",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    outline: "none",
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>
+                  Language *
+                </label>
+                <input
+                  placeholder="English"
+                  value={movieForm.language}
+                  onChange={(e) => setMovieForm({ ...movieForm, language: e.target.value })}
+                  required
+                  style={{
+                    width: "100%",
+                    padding: "12px 14px",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    outline: "none",
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>
+                Poster URL
+              </label>
+              <input
+                type="url"
+                placeholder="https://example.com/poster.jpg"
+                value={movieForm.posterUrl}
+                onChange={(e) => setMovieForm({ ...movieForm, posterUrl: e.target.value })}
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>
+                Genres (comma separated)
+              </label>
+              <input
+                placeholder="Action, Drama, Thriller"
+                value={movieForm.genre}
+                onChange={(e) => setMovieForm({ ...movieForm, genre: e.target.value })}
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                padding: "12px 32px",
+                background: loading ? "#d1d5db" : "#dc2626",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                cursor: loading ? "not-allowed" : "pointer",
+                fontSize: "15px",
+                fontWeight: "600",
+                transition: "all 0.2s",
+              }}
+            >
+              {loading ? "Adding..." : "Add Movie"}
+            </button>
+          </form>
+        </div>
       </div>
 
-      <hr style={{ margin: "32px 0" }} />
+      {/* ================= ADD THEATER ================= */}
+      <div style={{ marginBottom: "40px" }}>
+        <h2 style={{ margin: "0 0 20px 0", fontSize: "24px", fontWeight: "600", color: "#111827" }}>
+          Add New Theater
+        </h2>
+        <div
+          style={{
+            background: "#fff",
+            padding: "24px",
+            borderRadius: "12px",
+            border: "1px solid #e5e7eb",
+            boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
+          }}
+        >
+          <form onSubmit={addTheater} style={{ maxWidth: "700px" }}>
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>
+                Theater Name *
+              </label>
+              <input
+                placeholder="Enter theater name"
+                value={theaterForm.name}
+                onChange={(e) => setTheaterForm({ ...theaterForm, name: e.target.value })}
+                required
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  outline: "none",
+                }}
+              />
+            </div>
 
-      {/* ================= MANAGE MOVIES ================= */}
-      <div style={{ marginBottom: "32px" }}>
-        <h3>🎬 Manage Movies</h3>
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>
+                Location *
+              </label>
+              <input
+                placeholder="Enter city/location"
+                value={theaterForm.location}
+                onChange={(e) => setTheaterForm({ ...theaterForm, location: e.target.value })}
+                required
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>
+                Address
+              </label>
+              <input
+                placeholder="Enter full address"
+                value={theaterForm.address}
+                onChange={(e) => setTheaterForm({ ...theaterForm, address: e.target.value })}
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>
+                Amenities (comma separated)
+              </label>
+              <input
+                placeholder="e.g., Dolby Atmos, Parking, Food Court"
+                value={theaterForm.amenities}
+                onChange={(e) => setTheaterForm({ ...theaterForm, amenities: e.target.value })}
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                padding: "12px 32px",
+                background: loading ? "#d1d5db" : "#dc2626",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                cursor: loading ? "not-allowed" : "pointer",
+                fontSize: "15px",
+                fontWeight: "600",
+                transition: "all 0.2s",
+              }}
+            >
+              {loading ? "Adding..." : "Add Theater"}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* ================= ADD SHOW ================= */}
+      <div style={{ marginBottom: "40px" }}>
+        <h2 style={{ margin: "0 0 20px 0", fontSize: "24px", fontWeight: "600", color: "#111827" }}>
+          Add New Show
+        </h2>
+        <div
+          style={{
+            background: "#fff",
+            padding: "24px",
+            borderRadius: "12px",
+            border: "1px solid #e5e7eb",
+            boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
+          }}
+        >
+          <form onSubmit={addShow} style={{ maxWidth: "700px" }}>
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>
+                Select Movie *
+              </label>
+              <select
+                value={showForm.movieId}
+                onChange={(e) => setShowForm({ ...showForm, movieId: e.target.value })}
+                required
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  outline: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <option value="">Choose a movie</option>
+                {movies.map((m) => (
+                  <option key={m._id} value={m._id}>
+                    {m.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>
+                Select Theater *
+              </label>
+              <select
+                value={showForm.theaterId}
+                onChange={(e) => setShowForm({ ...showForm, theaterId: e.target.value })}
+                required
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  outline: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <option value="">Choose a theater</option>
+                {theaters.map((t) => (
+                  <option key={t._id} value={t._id}>
+                    {t.name} - {t.location}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "16px", marginBottom: "16px" }}>
+              <div>
+                <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>
+                  Screen Name *
+                </label>
+                <input
+                  placeholder="Screen 1, IMAX, etc."
+                  value={showForm.screen}
+                  onChange={(e) => setShowForm({ ...showForm, screen: e.target.value })}
+                  required
+                  style={{
+                    width: "100%",
+                    padding: "12px 14px",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    outline: "none",
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>
+                  Price (₹) *
+                </label>
+                <input
+                  type="number"
+                  placeholder="250"
+                  value={showForm.price}
+                  onChange={(e) => setShowForm({ ...showForm, price: e.target.value })}
+                  required
+                  style={{
+                    width: "100%",
+                    padding: "12px 14px",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    outline: "none",
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: "500", color: "#374151" }}>
+                Show Time *
+              </label>
+              <input
+                type="datetime-local"
+                value={showForm.startTime}
+                onChange={(e) => setShowForm({ ...showForm, startTime: e.target.value })}
+                required
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  fontSize: "14px",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || !showForm.movieId || !showForm.theaterId}
+              style={{
+                padding: "12px 32px",
+                background: loading || !showForm.movieId || !showForm.theaterId ? "#d1d5db" : "#dc2626",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                cursor: loading || !showForm.movieId || !showForm.theaterId ? "not-allowed" : "pointer",
+                fontSize: "15px",
+                fontWeight: "600",
+                transition: "all 0.2s",
+              }}
+            >
+              {loading ? "Creating..." : "Create Show & Generate Seats"}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <hr style={{ margin: "48px 0", border: "none", borderTop: "2px solid #e5e7eb" }} />
+
+      {/* ================= EXISTING MOVIES ================= */}
+      <div style={{ marginBottom: "40px" }}>
+        <h2 style={{ margin: "0 0 20px 0", fontSize: "24px", fontWeight: "600", color: "#111827" }}>
+          Existing Movies ({movies.length})
+        </h2>
 
         {movies.length === 0 ? (
-          <p style={{ color: "#666" }}>No movies yet. Add one below!</p>
+          <div
+            style={{
+              background: "#f9fafb",
+              padding: "40px",
+              borderRadius: "12px",
+              textAlign: "center",
+              color: "#6b7280",
+            }}
+          >
+            No movies added yet. Add your first movie above.
+          </div>
         ) : (
-          <div style={{ marginBottom: "24px" }}>
+          <div style={{ display: "grid", gap: "12px" }}>
             {movies.map((movie) => (
               <div
                 key={movie._id}
                 style={{
-                  border: "1px solid #ddd",
-                  padding: "12px",
-                  marginBottom: "12px",
-                  borderRadius: "8px",
+                  background: "#fff",
+                  border: "1px solid #e5e7eb",
+                  padding: "20px",
+                  borderRadius: "12px",
+                  boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
                   display: "flex",
-                  gap: "16px",
-                  alignItems: "center",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
                 }}
               >
-                {movie.posterUrl ? (
-                  <img
-                    src={movie.posterUrl}
-                    alt={movie.title}
-                    style={{
-                      width: "80px",
-                      height: "120px",
-                      objectFit: "cover",
-                      borderRadius: "4px",
-                    }}
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: "80px",
-                      height: "120px",
-                      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                      borderRadius: "4px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "32px",
-                    }}
-                  >
-                    🎬
-                  </div>
-                )}
-
                 <div style={{ flex: 1 }}>
-                  <h4 style={{ margin: "0 0 4px 0" }}>{movie.title}</h4>
-                  <p style={{ margin: "4px 0", fontSize: "14px", color: "#666" }}>
-                    {movie.duration} mins | {movie.language}
-                  </p>
-                  {movie.genre && movie.genre.length > 0 && (
-                    <p style={{ margin: "4px 0", fontSize: "12px", color: "#999" }}>
-                      {movie.genre.join(", ")}
+                  <h3 style={{ margin: "0 0 8px 0", fontSize: "18px", fontWeight: "600", color: "#111827" }}>
+                    {movie.title}
+                  </h3>
+                  {movie.description && (
+                    <p style={{ margin: "4px 0 12px 0", fontSize: "14px", color: "#6b7280", lineHeight: "1.5" }}>
+                      {movie.description}
                     </p>
                   )}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", fontSize: "13px", color: "#6b7280" }}>
+                    {movie.duration && <span>{movie.duration} mins</span>}
+                    {movie.language && <span>• {movie.language}</span>}
+                    {movie.genre && movie.genre.length > 0 && (
+                      <span>• {movie.genre.join(", ")}</span>
+                    )}
+                  </div>
                 </div>
-
-                <div style={{ display: "flex", gap: "8px" }}>
+                <div style={{ display: "flex", gap: "8px", marginLeft: "16px" }}>
                   <button
                     onClick={() => viewShowsForMovie(movie._id)}
                     style={{
                       padding: "8px 16px",
-                      background: "#1890ff",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "4px",
+                      background: "#fef2f2",
+                      color: "#dc2626",
+                      border: "1px solid #fecaca",
+                      borderRadius: "8px",
                       cursor: "pointer",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      transition: "all 0.2s",
+                      whiteSpace: "nowrap",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = "#fee2e2";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = "#fef2f2";
                     }}
                   >
                     View Shows
@@ -519,11 +904,22 @@ function AdminDashboard() {
                     onClick={() => deleteMovie(movie._id, movie.title)}
                     style={{
                       padding: "8px 16px",
-                      background: "#ff4d4f",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "4px",
+                      background: "transparent",
+                      color: "#dc2626",
+                      border: "1px solid #dc2626",
+                      borderRadius: "8px",
                       cursor: "pointer",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      transition: "all 0.2s",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = "#dc2626";
+                      e.target.style.color = "white";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = "transparent";
+                      e.target.style.color = "#dc2626";
                     }}
                   >
                     Delete
@@ -534,28 +930,21 @@ function AdminDashboard() {
           </div>
         )}
 
-        {/* SHOWS SECTION */}
+        {/* Shows Section */}
         {selectedMovieForShows && (
           <div
             ref={showsSectionRef}
             style={{
-              marginBottom: "32px",
-              background: "#e6f7ff",
-              padding: "20px",
-              borderRadius: "8px",
-              border: "2px solid #1890ff",
+              background: "#fef2f2",
+              padding: "24px",
+              borderRadius: "12px",
+              marginTop: "24px",
+              border: "1px solid #fecaca",
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "16px",
-              }}
-            >
-              <h3 style={{ margin: 0, color: "#0050b3" }}>
-                📺 Shows for "{movies.find((m) => m._id === selectedMovieForShows)?.title}"
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "600", color: "#111827" }}>
+                Shows for: {movies.find((m) => m._id === selectedMovieForShows)?.title}
               </h3>
               <button
                 onClick={() => {
@@ -563,301 +952,175 @@ function AdminDashboard() {
                   setShows([]);
                 }}
                 style={{
-                  padding: "8px 16px",
-                  background: "#ff4d4f",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "4px",
+                  padding: "6px 12px",
+                  background: "transparent",
+                  color: "#6b7280",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "6px",
                   cursor: "pointer",
+                  fontSize: "13px",
                 }}
               >
-                ✕ Close
+                Close
               </button>
             </div>
 
             {shows.length === 0 ? (
-              <div
-                style={{
-                  textAlign: "center",
-                  padding: "40px",
-                  background: "white",
-                  borderRadius: "4px",
-                }}
-              >
-                <p style={{ color: "#666" }}>No shows yet. Add one below!</p>
-              </div>
+              <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>
+                No shows scheduled for this movie yet.
+              </p>
             ) : (
-              shows.map((show) => (
-                <div
-                  key={show._id}
-                  style={{
-                    border: "1px solid #91d5ff",
-                    padding: "12px",
-                    marginBottom: "8px",
-                    borderRadius: "4px",
-                    background: "white",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <div>
-                    <p style={{ margin: "0 0 4px 0", fontWeight: "bold", fontSize: "16px" }}>
-                      🎭 {show.theater.name}
-                    </p>
-                    <p style={{ margin: "4px 0", fontSize: "14px", color: "#666" }}>
-                      📍 {show.theater.location} | Screen: {show.screen}
-                    </p>
-                    <p style={{ margin: "4px 0", fontSize: "14px", color: "#666" }}>
-                      📅 {new Date(show.startTime).toLocaleString()}
-                    </p>
-                    <p
-                      style={{
-                        margin: "4px 0",
-                        fontSize: "14px",
-                        color: "#52c41a",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      ₹{show.price} per seat
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => deleteShow(show._id, show)}
+              <div style={{ display: "grid", gap: "12px" }}>
+                {shows.map((show) => (
+                  <div
+                    key={show._id}
                     style={{
-                      padding: "8px 16px",
-                      background: "#ff4d4f",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
+                      background: "white",
+                      border: "1px solid #fecaca",
+                      padding: "16px",
+                      borderRadius: "8px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
                     }}
                   >
-                    🗑️ Delete
-                  </button>
-                </div>
-              ))
+                    <div>
+                      <p style={{ margin: "0 0 4px 0", fontWeight: "600", fontSize: "15px", color: "#111827" }}>
+                        {show.theater.name}
+                      </p>
+                      <p style={{ margin: "4px 0", fontSize: "13px", color: "#6b7280" }}>
+                        {show.theater.location} • {show.screen}
+                      </p>
+                      <p style={{ margin: "4px 0", fontSize: "13px", color: "#6b7280" }}>
+                        {new Date(show.startTime).toLocaleString()}
+                      </p>
+                      <p style={{ margin: "4px 0", fontSize: "14px", color: "#dc2626", fontWeight: "600" }}>
+                        ₹{show.price} per seat
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => deleteShow(show._id, show)}
+                      style={{
+                        padding: "8px 16px",
+                        background: "transparent",
+                        color: "#dc2626",
+                        border: "1px solid #dc2626",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                        fontWeight: "500",
+                        transition: "all 0.2s",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = "#dc2626";
+                        e.target.style.color = "white";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = "transparent";
+                        e.target.style.color = "#dc2626";
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}
-
-        <h4>Add New Movie</h4>
-        <form onSubmit={addMovie} style={{ maxWidth: "500px" }}>
-          <input
-            placeholder="Title *"
-            value={movieForm.title}
-            onChange={(e) => setMovieForm({ ...movieForm, title: e.target.value })}
-            required
-            style={{
-              width: "100%",
-              padding: "8px",
-              marginBottom: "8px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-            }}
-          />
-          <textarea
-            placeholder="Description"
-            value={movieForm.description}
-            onChange={(e) =>
-              setMovieForm({ ...movieForm, description: e.target.value })
-            }
-            rows="3"
-            style={{
-              width: "100%",
-              padding: "8px",
-              marginBottom: "8px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-              fontFamily: "inherit",
-            }}
-          />
-          <input
-            type="number"
-            placeholder="Duration (minutes) *"
-            value={movieForm.duration}
-            onChange={(e) =>
-              setMovieForm({ ...movieForm, duration: e.target.value })
-            }
-            required
-            style={{
-              width: "100%",
-              padding: "8px",
-              marginBottom: "8px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-            }}
-          />
-          <input
-            placeholder="Language *"
-            value={movieForm.language}
-            onChange={(e) =>
-              setMovieForm({ ...movieForm, language: e.target.value })
-            }
-            required
-            style={{
-              width: "100%",
-              padding: "8px",
-              marginBottom: "8px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-            }}
-          />
-          <input
-            type="url"
-            placeholder="Poster URL (optional)"
-            value={movieForm.posterUrl}
-            onChange={(e) =>
-              setMovieForm({ ...movieForm, posterUrl: e.target.value })
-            }
-            style={{
-              width: "100%",
-              padding: "8px",
-              marginBottom: "8px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-            }}
-          />
-          <input
-            placeholder="Genre (comma separated: Action, Drama)"
-            value={movieForm.genre}
-            onChange={(e) => setMovieForm({ ...movieForm, genre: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "8px",
-              marginBottom: "8px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-            }}
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              padding: "10px 20px",
-              background: "#1890ff",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: loading ? "not-allowed" : "pointer",
-            }}
-          >
-            {loading ? "Adding..." : "Add Movie"}
-          </button>
-        </form>
       </div>
 
-      <hr style={{ margin: "32px 0" }} />
+      {/* ================= EXISTING THEATERS ================= */}
+      <div style={{ marginBottom: "40px" }}>
+        <h2 style={{ margin: "0 0 20px 0", fontSize: "24px", fontWeight: "600", color: "#111827" }}>
+          Existing Theaters ({theaters.length})
+        </h2>
 
-      {/* ================= ADD SHOW ================= */}
-      <div>
-        <h3>➕ Add New Show</h3>
-        <form onSubmit={addShow} style={{ maxWidth: "500px" }}>
-          <select
-            value={showForm.movieId}
-            onChange={(e) => setShowForm({ ...showForm, movieId: e.target.value })}
-            required
+        {theaters.length === 0 ? (
+          <div
             style={{
-              width: "100%",
-              padding: "8px",
-              marginBottom: "8px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
+              background: "#f9fafb",
+              padding: "40px",
+              borderRadius: "12px",
+              textAlign: "center",
+              color: "#6b7280",
             }}
           >
-            <option value="">Select Movie *</option>
-            {movies.map((m) => (
-              <option key={m._id} value={m._id}>
-                {m.title}
-              </option>
+            No theaters added yet. Add your first theater above.
+          </div>
+        ) : (
+          <div style={{ display: "grid", gap: "12px" }}>
+            {theaters.map((theater) => (
+              <div
+                key={theater._id}
+                style={{
+                  background: "#fff",
+                  border: "1px solid #e5e7eb",
+                  padding: "20px",
+                  borderRadius: "12px",
+                  boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ margin: "0 0 8px 0", fontSize: "18px", fontWeight: "600", color: "#111827" }}>
+                    {theater.name}
+                  </h3>
+                  <p style={{ margin: "4px 0", fontSize: "14px", color: "#6b7280" }}>
+                    {theater.location}
+                    {theater.address && ` • ${theater.address}`}
+                  </p>
+                  {theater.amenities && theater.amenities.length > 0 && (
+                    <div style={{ marginTop: "12px", display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                      {theater.amenities.map((amenity, idx) => (
+                        <span
+                          key={idx}
+                          style={{
+                            fontSize: "12px",
+                            padding: "4px 10px",
+                            background: "#f3f4f6",
+                            color: "#4b5563",
+                            borderRadius: "6px",
+                            fontWeight: "500",
+                          }}
+                        >
+                          {amenity}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => deleteTheater(theater._id, theater.name)}
+                  style={{
+                    padding: "8px 16px",
+                    background: "transparent",
+                    color: "#dc2626",
+                    border: "1px solid #dc2626",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    transition: "all 0.2s",
+                    marginLeft: "16px",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = "#dc2626";
+                    e.target.style.color = "white";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = "transparent";
+                    e.target.style.color = "#dc2626";
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
             ))}
-          </select>
-
-          <select
-            value={showForm.theaterId}
-            onChange={(e) =>
-              setShowForm({ ...showForm, theaterId: e.target.value })
-            }
-            required
-            style={{
-              width: "100%",
-              padding: "8px",
-              marginBottom: "8px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-            }}
-          >
-            <option value="">Select Theater *</option>
-            {theaters.map((t) => (
-              <option key={t._id} value={t._id}>
-                {t.name} - {t.location}
-              </option>
-            ))}
-          </select>
-
-          <input
-            placeholder="Screen (e.g., Screen 1, IMAX)"
-            value={showForm.screen}
-            onChange={(e) => setShowForm({ ...showForm, screen: e.target.value })}
-            required
-            style={{
-              width: "100%",
-              padding: "8px",
-              marginBottom: "8px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-            }}
-          />
-
-          <input
-            type="datetime-local"
-            value={showForm.startTime}
-            onChange={(e) =>
-              setShowForm({ ...showForm, startTime: e.target.value })
-            }
-            required
-            style={{
-              width: "100%",
-              padding: "8px",
-              marginBottom: "8px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-            }}
-          />
-
-          <input
-            type="number"
-            placeholder="Price per seat"
-            value={showForm.price}
-            onChange={(e) => setShowForm({ ...showForm, price: e.target.value })}
-            required
-            style={{
-              width: "100%",
-              padding: "8px",
-              marginBottom: "8px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-            }}
-          />
-
-          <button
-            type="submit"
-            disabled={loading || !showForm.movieId || !showForm.theaterId}
-            style={{
-              padding: "10px 20px",
-              background: "#1890ff",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor:
-                loading || !showForm.movieId || !showForm.theaterId
-                  ? "not-allowed"
-                  : "pointer",
-            }}
-          >
-            {loading ? "Creating..." : "Add Show & Generate Seats"}
-          </button>
-        </form>
+          </div>
+        )}
       </div>
     </div>
   );

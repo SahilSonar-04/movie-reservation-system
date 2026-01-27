@@ -27,7 +27,6 @@ function Movies() {
           api.get("/movies"),
           api.get("/theaters/locations"),
         ]);
-        // ✅ FIX: Access movies property from response
         const moviesData = moviesRes.data.movies || moviesRes.data;
         setMovies(moviesData);
         setFilteredMovies(moviesData);
@@ -47,7 +46,6 @@ function Movies() {
   useEffect(() => {
     let result = movies;
 
-    // Search by title or description
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
@@ -57,7 +55,6 @@ function Movies() {
       );
     }
 
-    // Filter by language
     if (selectedLanguage !== "all") {
       result = result.filter(
         (movie) =>
@@ -66,7 +63,6 @@ function Movies() {
       );
     }
 
-    // Filter by genre
     if (selectedGenre !== "all") {
       result = result.filter(
         (movie) =>
@@ -110,27 +106,55 @@ function Movies() {
 
   if (loading) {
     return (
-      <div style={{ textAlign: "center", padding: "40px" }}>
-        <p>Loading movies...</p>
+      <div style={{ textAlign: "center", padding: "80px 20px" }}>
+        <div
+          style={{
+            width: "40px",
+            height: "40px",
+            border: "3px solid #f3f4f6",
+            borderTopColor: "#dc2626",
+            borderRadius: "50%",
+            margin: "0 auto 12px",
+            animation: "spin 1s linear infinite",
+          }}
+        />
+        <p style={{ color: "#6b7280", fontSize: "14px" }}>Loading movies...</p>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{ padding: "20px" }}>
+      <div style={{ maxWidth: "600px", margin: "80px auto", padding: "0 20px" }}>
         <div
           style={{
-            background: "#ffebee",
-            color: "#c62828",
-            padding: "12px",
-            borderRadius: "4px",
+            background: "#fef2f2",
+            border: "1px solid #fecaca",
+            color: "#991b1b",
+            padding: "16px",
+            borderRadius: "8px",
             marginBottom: "16px",
           }}
         >
           {error}
         </div>
-        <button onClick={() => window.location.reload()} style={{ padding: "8px 16px" }}>
+        <button
+          onClick={() => window.location.reload()}
+          style={{
+            padding: "10px 20px",
+            background: "#dc2626",
+            color: "white",
+            border: "none",
+            borderRadius: "8px",
+            cursor: "pointer",
+            fontWeight: "500",
+          }}
+        >
           Retry
         </button>
       </div>
@@ -139,100 +163,132 @@ function Movies() {
 
   if (movies.length === 0) {
     return (
-      <div style={{ textAlign: "center", padding: "40px" }}>
-        <h2>No Movies Available</h2>
-        <p style={{ color: "#666" }}>Check back later for new releases!</p>
+      <div style={{ textAlign: "center", padding: "80px 20px" }}>
+        <h2 style={{ color: "#111827", marginBottom: "8px" }}>No Movies Available</h2>
+        <p style={{ color: "#6b7280" }}>Check back later for new releases!</p>
       </div>
     );
   }
 
+  const activeFiltersCount = [
+    searchQuery,
+    selectedLocation !== "all",
+    selectedLanguage !== "all",
+    selectedGenre !== "all",
+  ].filter(Boolean).length;
+
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "24px",
-        }}
-      >
-        <div>
-          <h2 style={{ margin: 0 }}>Now Showing</h2>
-          <p style={{ color: "#666", margin: "4px 0 0 0" }}>
-            {filteredMovies.length} movie{filteredMovies.length !== 1 ? "s" : ""}{" "}
-            available
-          </p>
-        </div>
+      {/* Header - More compact */}
+      <div style={{ marginBottom: "24px" }}>
+        <h1 style={{ margin: "0 0 4px 0", fontSize: "28px", fontWeight: "700", color: "#111827" }}>
+          Now Showing
+        </h1>
+        <p style={{ color: "#6b7280", margin: 0, fontSize: "14px" }}>
+          {filteredMovies.length} {filteredMovies.length === 1 ? "movie" : "movies"} available
+        </p>
       </div>
 
-      {/* Search and Filter */}
+      {/* Filters - More compact */}
       <div
         style={{
           background: "#fff",
           padding: "16px",
           borderRadius: "8px",
           marginBottom: "24px",
-          border: "1px solid #e0e0e0",
+          border: "1px solid #e5e7eb",
+          boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
         }}
       >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "2fr 1fr 1fr 1fr auto",
-            gap: "12px",
-            alignItems: "center",
-          }}
-        >
-          {/* Search */}
+        {/* Search Bar */}
+        <div style={{ marginBottom: "12px" }}>
           <div style={{ position: "relative" }}>
+            <svg
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                width: "16px",
+                height: "16px",
+                color: "#9ca3af",
+              }}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
             <input
               type="text"
-              placeholder="🔍 Search movies..."
+              placeholder="Search for movies..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
                 width: "100%",
-                padding: "10px 12px",
-                border: "1px solid #ddd",
-                borderRadius: "4px",
+                padding: "10px 12px 10px 40px",
+                border: "1px solid #e5e7eb",
+                borderRadius: "6px",
                 fontSize: "14px",
+                outline: "none",
+                transition: "border-color 0.2s",
               }}
+              onFocus={(e) => (e.target.style.borderColor = "#dc2626")}
+              onBlur={(e) => (e.target.style.borderColor = "#e5e7eb")}
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
                 style={{
                   position: "absolute",
-                  right: "8px",
+                  right: "10px",
                   top: "50%",
                   transform: "translateY(-50%)",
                   background: "none",
                   border: "none",
                   cursor: "pointer",
+                  color: "#9ca3af",
                   fontSize: "18px",
-                  color: "#999",
+                  padding: "4px",
+                  lineHeight: 1,
                 }}
               >
                 ×
               </button>
             )}
           </div>
+        </div>
 
+        {/* Filter Dropdowns */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: "10px",
+          }}
+        >
           {/* Location Filter */}
           <select
             value={selectedLocation}
             onChange={(e) => setSelectedLocation(e.target.value)}
             style={{
               padding: "10px 12px",
-              border: "1px solid #ddd",
-              borderRadius: "4px",
-              fontSize: "14px",
+              border: "1px solid #e5e7eb",
+              borderRadius: "6px",
+              fontSize: "13px",
               cursor: "pointer",
-              background: selectedLocation !== "all" ? "#e6f7ff" : "white",
-              fontWeight: selectedLocation !== "all" ? "bold" : "normal",
+              background: selectedLocation !== "all" ? "#fef2f2" : "white",
+              color: selectedLocation !== "all" ? "#dc2626" : "#374151",
+              fontWeight: selectedLocation !== "all" ? "500" : "400",
+              outline: "none",
             }}
           >
-            <option value="all">📍 All Cities</option>
+            <option value="all">All Cities</option>
             {locations.map((loc) => (
               <option key={loc} value={loc}>
                 {loc}
@@ -240,16 +296,20 @@ function Movies() {
             ))}
           </select>
 
-          {/* Language */}
+          {/* Language Filter */}
           <select
             value={selectedLanguage}
             onChange={(e) => setSelectedLanguage(e.target.value)}
             style={{
               padding: "10px 12px",
-              border: "1px solid #ddd",
-              borderRadius: "4px",
-              fontSize: "14px",
+              border: "1px solid #e5e7eb",
+              borderRadius: "6px",
+              fontSize: "13px",
               cursor: "pointer",
+              background: selectedLanguage !== "all" ? "#fef2f2" : "white",
+              color: selectedLanguage !== "all" ? "#dc2626" : "#374151",
+              fontWeight: selectedLanguage !== "all" ? "500" : "400",
+              outline: "none",
             }}
           >
             <option value="all">All Languages</option>
@@ -260,16 +320,20 @@ function Movies() {
             ))}
           </select>
 
-          {/* Genre */}
+          {/* Genre Filter */}
           <select
             value={selectedGenre}
             onChange={(e) => setSelectedGenre(e.target.value)}
             style={{
               padding: "10px 12px",
-              border: "1px solid #ddd",
-              borderRadius: "4px",
-              fontSize: "14px",
+              border: "1px solid #e5e7eb",
+              borderRadius: "6px",
+              fontSize: "13px",
               cursor: "pointer",
+              background: selectedGenre !== "all" ? "#fef2f2" : "white",
+              color: selectedGenre !== "all" ? "#dc2626" : "#374151",
+              fontWeight: selectedGenre !== "all" ? "500" : "400",
+              outline: "none",
             }}
           >
             <option value="all">All Genres</option>
@@ -280,85 +344,35 @@ function Movies() {
             ))}
           </select>
 
-          {/* Clear */}
-          {(searchQuery ||
-            selectedLocation !== "all" ||
-            selectedLanguage !== "all" ||
-            selectedGenre !== "all") && (
+          {/* Clear Filters Button */}
+          {activeFiltersCount > 0 && (
             <button
               onClick={clearFilters}
               style={{
-                padding: "10px 16px",
-                background: "#f5f5f5",
-                border: "1px solid #ddd",
-                borderRadius: "4px",
+                padding: "10px 12px",
+                background: "transparent",
+                border: "1px solid #e5e7eb",
+                borderRadius: "6px",
                 cursor: "pointer",
-                fontSize: "14px",
+                fontSize: "13px",
+                fontWeight: "500",
+                color: "#6b7280",
                 whiteSpace: "nowrap",
+                transition: "all 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.borderColor = "#dc2626";
+                e.target.style.color = "#dc2626";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.borderColor = "#e5e7eb";
+                e.target.style.color = "#6b7280";
               }}
             >
-              Clear
+              Clear ({activeFiltersCount})
             </button>
           )}
         </div>
-
-        {/* Active Filters */}
-        {(searchQuery ||
-          selectedLocation !== "all" ||
-          selectedLanguage !== "all" ||
-          selectedGenre !== "all") && (
-          <div style={{ marginTop: "12px", fontSize: "14px", color: "#666" }}>
-            <strong>Active:</strong>
-            {searchQuery && (
-              <span
-                style={{
-                  marginLeft: "8px",
-                  padding: "4px 8px",
-                  background: "#e6f7ff",
-                  borderRadius: "4px",
-                }}
-              >
-                "{searchQuery}"
-              </span>
-            )}
-            {selectedLocation !== "all" && (
-              <span
-                style={{
-                  marginLeft: "8px",
-                  padding: "4px 8px",
-                  background: "#fff7e6",
-                  borderRadius: "4px",
-                }}
-              >
-                📍 {selectedLocation}
-              </span>
-            )}
-            {selectedLanguage !== "all" && (
-              <span
-                style={{
-                  marginLeft: "8px",
-                  padding: "4px 8px",
-                  background: "#f6ffed",
-                  borderRadius: "4px",
-                }}
-              >
-                {selectedLanguage}
-              </span>
-            )}
-            {selectedGenre !== "all" && (
-              <span
-                style={{
-                  marginLeft: "8px",
-                  padding: "4px 8px",
-                  background: "#fff0f6",
-                  borderRadius: "4px",
-                }}
-              >
-                {selectedGenre}
-              </span>
-            )}
-          </div>
-        )}
       </div>
 
       {/* No Results */}
@@ -367,23 +381,26 @@ function Movies() {
           style={{
             textAlign: "center",
             padding: "60px 20px",
-            background: "#f9f9f9",
+            background: "#fff",
             borderRadius: "8px",
+            border: "1px solid #e5e7eb",
           }}
         >
-          <h3 style={{ margin: "0 0 8px 0" }}>No movies found</h3>
-          <p style={{ color: "#666", marginBottom: "16px" }}>
+          <h3 style={{ margin: "0 0 6px 0", color: "#111827", fontSize: "18px" }}>No movies found</h3>
+          <p style={{ color: "#6b7280", marginBottom: "20px", fontSize: "14px" }}>
             Try adjusting your filters
           </p>
           <button
             onClick={clearFilters}
             style={{
               padding: "10px 20px",
-              background: "#1890ff",
+              background: "#dc2626",
               color: "white",
               border: "none",
-              borderRadius: "4px",
+              borderRadius: "6px",
               cursor: "pointer",
+              fontWeight: "500",
+              fontSize: "14px",
             }}
           >
             Clear All Filters
@@ -394,7 +411,7 @@ function Movies() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
             gap: "20px",
           }}
         >

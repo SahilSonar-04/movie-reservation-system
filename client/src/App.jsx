@@ -11,39 +11,59 @@ function App() {
   const location = useLocation();
 
   return (
-    <div style={{ minHeight: "100vh", background: "#fafafa" }}>
+    <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
       {/* Header / Navigation */}
       <header
         style={{
           background: "#fff",
-          borderBottom: "1px solid #e0e0e0",
-          padding: "16px 24px",
-          marginBottom: "24px",
-          boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+          borderBottom: "1px solid #e5e7eb",
+          boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
+          position: "sticky",
+          top: 0,
+          zIndex: 1000,
         }}
       >
         <div
           style={{
-            maxWidth: "1200px",
+            maxWidth: "1280px",
             margin: "0 auto",
+            padding: "0 24px",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            height: "64px",
           }}
         >
-          <h1 style={{ margin: 0, fontSize: "24px", color: "#333" }}>
-            🎬 Movie Reservation System
-          </h1>
+          {/* Logo */}
+          <Link
+            to="/"
+            style={{
+              textDecoration: "none",
+              fontSize: "24px",
+              fontWeight: "700",
+              background: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+              letterSpacing: "-0.5px",
+            }}
+          >
+            CineBook
+          </Link>
 
           {user && (
-            <nav style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+            <nav style={{ display: "flex", gap: "8px", alignItems: "center" }}>
               <Link
                 to="/"
                 style={{
                   textDecoration: "none",
-                  color: location.pathname === "/" ? "#1890ff" : "#666",
-                  fontWeight: location.pathname === "/" ? "bold" : "normal",
-                  padding: "8px 12px",
+                  color: location.pathname === "/" ? "#dc2626" : "#6b7280",
+                  fontWeight: location.pathname === "/" ? "600" : "500",
+                  padding: "8px 16px",
+                  borderRadius: "8px",
+                  background: location.pathname === "/" ? "#fef2f2" : "transparent",
+                  transition: "all 0.2s",
+                  fontSize: "14px",
                 }}
               >
                 Movies
@@ -53,9 +73,13 @@ function App() {
                 to="/my-bookings"
                 style={{
                   textDecoration: "none",
-                  color: location.pathname === "/my-bookings" ? "#1890ff" : "#666",
-                  fontWeight: location.pathname === "/my-bookings" ? "bold" : "normal",
-                  padding: "8px 12px",
+                  color: location.pathname === "/my-bookings" ? "#dc2626" : "#6b7280",
+                  fontWeight: location.pathname === "/my-bookings" ? "600" : "500",
+                  padding: "8px 16px",
+                  borderRadius: "8px",
+                  background: location.pathname === "/my-bookings" ? "#fef2f2" : "transparent",
+                  transition: "all 0.2s",
+                  fontSize: "14px",
                 }}
               >
                 My Bookings
@@ -66,38 +90,61 @@ function App() {
                   to="/admin"
                   style={{
                     textDecoration: "none",
-                    color: location.pathname === "/admin" ? "#1890ff" : "#666",
-                    fontWeight: location.pathname === "/admin" ? "bold" : "normal",
-                    padding: "8px 12px",
+                    color: location.pathname === "/admin" ? "#dc2626" : "#6b7280",
+                    fontWeight: location.pathname === "/admin" ? "600" : "500",
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    background: location.pathname === "/admin" ? "#fef2f2" : "transparent",
+                    transition: "all 0.2s",
+                    fontSize: "14px",
                   }}
                 >
-                  Admin Dashboard
+                  Admin
                 </Link>
               )}
 
+              <div
+                style={{
+                  height: "24px",
+                  width: "1px",
+                  background: "#e5e7eb",
+                  margin: "0 8px",
+                }}
+              />
+
               <span
                 style={{
-                  color: "#999",
-                  fontSize: "14px",
-                  marginLeft: "8px",
+                  color: "#9ca3af",
+                  fontSize: "13px",
+                  padding: "0 8px",
                 }}
               >
-                {user.role === "ADMIN" ? "👑 Admin" : "👤 User"}
+                {user.role === "ADMIN" ? "Admin" : user.name || "User"}
               </span>
 
               <button
                 onClick={logout}
                 style={{
                   padding: "8px 16px",
-                  background: "#ff4d4f",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "4px",
+                  background: "transparent",
+                  color: "#6b7280",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
                   cursor: "pointer",
-                  marginLeft: "8px",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.borderColor = "#dc2626";
+                  e.target.style.color = "#dc2626";
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.borderColor = "#e5e7eb";
+                  e.target.style.color = "#6b7280";
                 }}
               >
-                Logout
+                Sign Out
               </button>
             </nav>
           )}
@@ -107,9 +154,9 @@ function App() {
       {/* Main Content */}
       <main
         style={{
-          maxWidth: "1200px",
+          maxWidth: "1280px",
           margin: "0 auto",
-          padding: "0 24px 40px",
+          padding: "32px 24px",
         }}
       >
         <Routes>
@@ -154,15 +201,19 @@ function App() {
       <footer
         style={{
           textAlign: "center",
-          padding: "20px",
-          color: "#999",
+          padding: "32px 24px",
+          color: "#9ca3af",
           fontSize: "14px",
-          borderTop: "1px solid #e0e0e0",
+          borderTop: "1px solid #e5e7eb",
           background: "#fff",
+          marginTop: "64px",
         }}
       >
         <p style={{ margin: 0 }}>
-          Movie Reservation System - Sahil Sonar
+          © 2026 CineBook - Movie Reservation System
+        </p>
+        <p style={{ margin: "8px 0 0 0", fontSize: "12px" }}>
+          Designed by Sahil Sonar
         </p>
       </footer>
     </div>

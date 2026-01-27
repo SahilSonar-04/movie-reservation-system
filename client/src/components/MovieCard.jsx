@@ -3,8 +3,8 @@ function MovieCard({ movie, onSelect }) {
     <div
       style={{
         border: "1px solid #e0e0e0",
-        padding: "16px",
-        width: "220px",
+        padding: "12px",
+        width: "180px",
         cursor: "pointer",
         borderRadius: "8px",
         transition: "all 0.2s ease",
@@ -28,36 +28,36 @@ function MovieCard({ movie, onSelect }) {
           alt={movie.title}
           style={{
             width: "100%",
-            height: "280px",
+            height: "220px",
             objectFit: "cover",
             borderRadius: "4px",
-            marginBottom: "12px",
+            marginBottom: "10px",
           }}
         />
       ) : (
         <div
           style={{
             width: "100%",
-            height: "280px",
+            height: "220px",
             background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
             borderRadius: "4px",
-            marginBottom: "12px",
+            marginBottom: "10px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             color: "white",
-            fontSize: "48px",
+            fontSize: "40px",
             fontWeight: "bold",
           }}
         >
-          🎬
+          {movie.title.charAt(0).toUpperCase()}
         </div>
       )}
 
       <h3
         style={{
-          margin: "0 0 8px 0",
-          fontSize: "18px",
+          margin: "0 0 6px 0",
+          fontSize: "15px",
           fontWeight: "bold",
           color: "#333",
         }}
@@ -68,8 +68,8 @@ function MovieCard({ movie, onSelect }) {
       {movie.description && (
         <p
           style={{
-            margin: "0 0 8px 0",
-            fontSize: "13px",
+            margin: "0 0 6px 0",
+            fontSize: "12px",
             color: "#666",
             lineHeight: "1.4",
             overflow: "hidden",
@@ -83,21 +83,21 @@ function MovieCard({ movie, onSelect }) {
         </p>
       )}
 
-      <div style={{ fontSize: "13px", color: "#888" }}>
+      <div style={{ fontSize: "11px", color: "#888" }}>
         {movie.duration && (
-          <p style={{ margin: "4px 0" }}>
+          <p style={{ margin: "3px 0" }}>
             <strong>Duration:</strong> {movie.duration} mins
           </p>
         )}
 
         {movie.language && (
-          <p style={{ margin: "4px 0" }}>
+          <p style={{ margin: "3px 0" }}>
             <strong>Language:</strong> {movie.language}
           </p>
         )}
 
         {movie.genre && movie.genre.length > 0 && (
-          <p style={{ margin: "4px 0" }}>
+          <p style={{ margin: "3px 0" }}>
             <strong>Genre:</strong> {movie.genre.join(", ")}
           </p>
         )}

@@ -1,5 +1,8 @@
 import Booking from "../models/booking.model.js";
 import Seat from "../models/seat.model.js";
+import Movie from "../models/movie.model.js";
+import Theater from "../models/theater.model.js";
+import Show from "../models/show.model.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
 export const getAdminStats = asyncHandler(async (req, res) => {
@@ -25,7 +28,12 @@ export const getAdminStats = asyncHandler(async (req, res) => {
   const cancellationRate =
     totalBookingsAll === 0
       ? 0
-      : (cancelledBookings / totalBookingsAll) * 100;
+      : ((cancelledBookings / totalBookingsAll) * 100).toFixed(1);
+
+  // ✅ Count movies, theaters, and shows
+  const totalMovies = await Movie.countDocuments();
+  const totalTheaters = await Theater.countDocuments();
+  const totalShows = await Show.countDocuments();
 
   // ✅ Seat occupancy
   const occupancy = await Seat.aggregate([
@@ -105,7 +113,10 @@ export const getAdminStats = asyncHandler(async (req, res) => {
     totalRevenue,
     totalBookings,
     cancelledBookings,
-    cancellationRate,
+    cancellationRate: parseFloat(cancellationRate),
+    totalMovies,
+    totalTheaters,
+    totalShows,
     occupancy,
     popularShows,
   });

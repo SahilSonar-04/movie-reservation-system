@@ -61,41 +61,77 @@ function Shows({ movie, selectedLocation, onBack, onSelectShow }) {
 
   return (
     <div>
+      {/* Back Button */}
       <button
         onClick={onBack}
         style={{
-          padding: "8px 16px",
-          marginBottom: "16px",
-          background: "#f5f5f5",
-          border: "1px solid #ddd",
-          borderRadius: "4px",
+          padding: "10px 20px",
+          marginBottom: "24px",
+          background: "transparent",
+          border: "1px solid #e5e7eb",
+          borderRadius: "8px",
           cursor: "pointer",
+          fontSize: "14px",
+          fontWeight: "500",
+          color: "#6b7280",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          transition: "all 0.2s",
+        }}
+        onMouseEnter={(e) => {
+          e.target.style.borderColor = "#dc2626";
+          e.target.style.color = "#dc2626";
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.borderColor = "#e5e7eb";
+          e.target.style.color = "#6b7280";
         }}
       >
-        ← Back to Movies
+        <svg
+          width="16"
+          height="16"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 19l-7-7 7-7"
+          />
+        </svg>
+        Back to Movies
       </button>
 
-      <div style={{ marginBottom: "24px" }}>
-        <h2 style={{ margin: "0 0 8px 0" }}>{movie.title}</h2>
+      {/* Movie Header */}
+      <div style={{ marginBottom: "32px" }}>
+        <h1 style={{ margin: "0 0 8px 0", fontSize: "32px", fontWeight: "700", color: "#111827" }}>
+          {movie.title}
+        </h1>
         {movie.description && (
-          <p style={{ color: "#666", margin: "0 0 16px 0" }}>{movie.description}</p>
+          <p style={{ color: "#6b7280", margin: "0 0 16px 0", fontSize: "15px", lineHeight: "1.6" }}>
+            {movie.description}
+          </p>
         )}
 
+        {/* Location Filter */}
         {locations.length > 1 && (
-          <div style={{ marginTop: "16px" }}>
-            <label style={{ marginRight: "8px", fontWeight: "bold" }}>
-              Filter by City:
-            </label>
+          <div style={{ marginTop: "20px" }}>
             <select
               value={filterLocation}
               onChange={(e) => setFilterLocation(e.target.value)}
               style={{
-                padding: "8px 12px",
-                border: "1px solid #ddd",
-                borderRadius: "4px",
+                padding: "12px 14px",
+                border: "1px solid #e5e7eb",
+                borderRadius: "8px",
                 fontSize: "14px",
                 cursor: "pointer",
-                background: filterLocation !== "all" ? "#e6f7ff" : "white",
+                background: filterLocation !== "all" ? "#fef2f2" : "white",
+                color: filterLocation !== "all" ? "#dc2626" : "#374151",
+                fontWeight: filterLocation !== "all" ? "500" : "400",
+                minWidth: "200px",
               }}
             >
               <option value="all">All Cities</option>
@@ -109,19 +145,33 @@ function Shows({ movie, selectedLocation, onBack, onSelectShow }) {
         )}
       </div>
 
+      {/* Loading State */}
       {loading && (
-        <div style={{ textAlign: "center", padding: "40px" }}>
-          <p>Loading shows...</p>
+        <div style={{ textAlign: "center", padding: "60px 20px" }}>
+          <div
+            style={{
+              width: "40px",
+              height: "40px",
+              border: "4px solid #f3f4f6",
+              borderTopColor: "#dc2626",
+              borderRadius: "50%",
+              margin: "0 auto 16px",
+              animation: "spin 1s linear infinite",
+            }}
+          />
+          <p style={{ color: "#6b7280", fontSize: "14px" }}>Loading shows...</p>
         </div>
       )}
 
+      {/* Error State */}
       {error && (
         <div
           style={{
-            background: "#ffebee",
-            color: "#c62828",
-            padding: "12px",
-            borderRadius: "4px",
+            background: "#fef2f2",
+            border: "1px solid #fecaca",
+            color: "#991b1b",
+            padding: "16px",
+            borderRadius: "8px",
             marginBottom: "16px",
           }}
         >
@@ -129,9 +179,18 @@ function Shows({ movie, selectedLocation, onBack, onSelectShow }) {
         </div>
       )}
 
+      {/* No Shows */}
       {!loading && !error && filteredShows.length === 0 && (
-        <div style={{ textAlign: "center", padding: "40px" }}>
-          <p>
+        <div
+          style={{
+            textAlign: "center",
+            padding: "60px 20px",
+            background: "#fff",
+            borderRadius: "12px",
+            border: "1px solid #e5e7eb",
+          }}
+        >
+          <p style={{ color: "#6b7280", marginBottom: "16px" }}>
             No shows available
             {filterLocation !== "all" ? ` in ${filterLocation}` : ""}.
           </p>
@@ -139,13 +198,13 @@ function Shows({ movie, selectedLocation, onBack, onSelectShow }) {
             <button
               onClick={() => setFilterLocation("all")}
               style={{
-                padding: "8px 16px",
-                marginTop: "12px",
-                background: "#1890ff",
+                padding: "10px 20px",
+                background: "#dc2626",
                 color: "white",
                 border: "none",
-                borderRadius: "4px",
+                borderRadius: "8px",
                 cursor: "pointer",
+                fontWeight: "500",
               }}
             >
               Show All Cities
@@ -154,66 +213,67 @@ function Shows({ movie, selectedLocation, onBack, onSelectShow }) {
         </div>
       )}
 
+      {/* Theater Groups */}
       {!loading && !error && theaterGroups.length > 0 && (
         <div>
-          <h3>
+          <h2 style={{ margin: "0 0 20px 0", fontSize: "20px", fontWeight: "600", color: "#111827" }}>
             Available Shows ({filteredShows.length})
             {filterLocation !== "all" && ` in ${filterLocation}`}
-          </h3>
+          </h2>
 
           {theaterGroups.map((group) => (
             <div
               key={group.theater._id}
               style={{
-                border: "1px solid #e0e0e0",
-                borderRadius: "8px",
-                padding: "16px",
-                marginBottom: "20px",
+                border: "1px solid #e5e7eb",
+                borderRadius: "12px",
+                padding: "24px",
+                marginBottom: "24px",
                 background: "#fff",
+                boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
               }}
             >
               {/* Theater Header */}
               <div
                 style={{
-                  borderBottom: "2px solid #f0f0f0",
-                  paddingBottom: "12px",
-                  marginBottom: "16px",
+                  borderBottom: "1px solid #f3f4f6",
+                  paddingBottom: "16px",
+                  marginBottom: "20px",
                 }}
               >
-                <h4 style={{ margin: "0 0 8px 0", fontSize: "18px" }}>
-                  🎭 {group.theater.name}
-                </h4>
-                <p style={{ margin: "4px 0", fontSize: "14px", color: "#666" }}>
-                  📍 {group.theater.location}
-                  {group.theater.address && ` - ${group.theater.address}`}
+                <h3 style={{ margin: "0 0 8px 0", fontSize: "20px", fontWeight: "600", color: "#111827" }}>
+                  {group.theater.name}
+                </h3>
+                <p style={{ margin: "0", fontSize: "14px", color: "#6b7280" }}>
+                  {group.theater.location}
+                  {group.theater.address && ` • ${group.theater.address}`}
                 </p>
                 {group.theater.amenities && group.theater.amenities.length > 0 && (
-                  <div style={{ marginTop: "8px" }}>
+                  <div style={{ marginTop: "12px", display: "flex", flexWrap: "wrap", gap: "8px" }}>
                     {group.theater.amenities.map((amenity) => (
                       <span
                         key={amenity}
                         style={{
-                          display: "inline-block",
-                          background: "#f0f0f0",
-                          padding: "4px 8px",
-                          borderRadius: "4px",
                           fontSize: "12px",
-                          marginRight: "6px",
-                          marginTop: "4px",
+                          padding: "4px 10px",
+                          background: "#f3f4f6",
+                          color: "#4b5563",
+                          borderRadius: "6px",
+                          fontWeight: "500",
                         }}
                       >
-                        ✨ {amenity}
+                        {amenity}
                       </span>
                     ))}
                   </div>
                 )}
               </div>
 
-              {/* Shows for this theater */}
+              {/* Shows Grid */}
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
                   gap: "12px",
                 }}
               >
@@ -222,92 +282,88 @@ function Shows({ movie, selectedLocation, onBack, onSelectShow }) {
                   .map((show) => {
                     const showDate = new Date(show.startTime);
                     const isPast = showDate < new Date();
+                    const formattedDate = showDate.toLocaleDateString("en-US", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    });
+                    const formattedTime = showDate.toLocaleTimeString("en-US", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    });
 
                     return (
                       <div
                         key={show._id}
                         onClick={() => !isPast && onSelectShow(show)}
                         style={{
-                          border: isPast ? "1px solid #f0f0f0" : "1px solid #1890ff",
-                          borderRadius: "6px",
-                          padding: "12px",
+                          border: isPast ? "1px solid #f3f4f6" : "1px solid #e5e7eb",
+                          padding: "16px",
                           cursor: isPast ? "not-allowed" : "pointer",
-                          background: isPast ? "#fafafa" : "white",
+                          borderRadius: "8px",
                           transition: "all 0.2s",
-                          opacity: isPast ? 0.5 : 1,
+                          background: isPast ? "#fafafa" : "#fff",
+                          opacity: isPast ? 0.6 : 1,
                         }}
                         onMouseEnter={(e) => {
                           if (!isPast) {
-                            e.currentTarget.style.background = "#e6f7ff";
-                            e.currentTarget.style.transform = "translateY(-2px)";
+                            e.currentTarget.style.borderColor = "#dc2626";
+                            e.currentTarget.style.background = "#fef2f2";
                           }
                         }}
                         onMouseLeave={(e) => {
                           if (!isPast) {
-                            e.currentTarget.style.background = "white";
-                            e.currentTarget.style.transform = "translateY(0)";
+                            e.currentTarget.style.borderColor = "#e5e7eb";
+                            e.currentTarget.style.background = "#fff";
                           }
                         }}
                       >
-                        <p
-                          style={{
-                            margin: "0 0 8px 0",
-                            fontWeight: "bold",
-                            fontSize: "14px",
-                          }}
-                        >
-                          {show.screen}
-                        </p>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
+                          <p style={{ margin: 0, fontSize: "15px", fontWeight: "600", color: "#111827" }}>
+                            {show.screen}
+                          </p>
+                          <div
+                            style={{
+                              padding: "4px 10px",
+                              background: isPast ? "#f3f4f6" : "#fef2f2",
+                              color: isPast ? "#9ca3af" : "#dc2626",
+                              borderRadius: "6px",
+                              fontWeight: "600",
+                              fontSize: "14px",
+                            }}
+                          >
+                            ₹{show.price}
+                          </div>
+                        </div>
 
-                        <p
-                          style={{
-                            margin: "4px 0",
-                            fontSize: "13px",
-                            color: "#666",
-                          }}
-                        >
-                          📅 {showDate.toLocaleDateString("en-US", {
-                            weekday: "short",
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </p>
+                        <div style={{ fontSize: "13px", color: "#6b7280", marginBottom: "4px" }}>
+                          {formattedDate}
+                        </div>
 
-                        <p
-                          style={{
-                            margin: "4px 0",
-                            fontSize: "16px",
-                            fontWeight: "bold",
-                            color: isPast ? "#999" : "#1890ff",
-                          }}
-                        >
-                          🕐 {showDate.toLocaleTimeString("en-US", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-
-                        <p
-                          style={{
-                            margin: "8px 0 0 0",
-                            fontSize: "14px",
-                            color: isPast ? "#999" : "#52c41a",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          ₹{show.price}
-                        </p>
+                        <div style={{ 
+                          fontSize: "16px", 
+                          fontWeight: "600",
+                          color: isPast ? "#9ca3af" : "#dc2626",
+                        }}>
+                          {formattedTime}
+                        </div>
 
                         {isPast && (
-                          <p
+                          <span
                             style={{
-                              margin: "8px 0 0 0",
-                              fontSize: "12px",
-                              color: "#ff4d4f",
+                              display: "inline-block",
+                              marginTop: "8px",
+                              fontSize: "11px",
+                              padding: "4px 8px",
+                              background: "#f3f4f6",
+                              color: "#6b7280",
+                              borderRadius: "4px",
+                              fontWeight: "500",
+                              textTransform: "uppercase",
                             }}
                           >
                             Show Ended
-                          </p>
+                          </span>
                         )}
                       </div>
                     );
@@ -317,6 +373,12 @@ function Shows({ movie, selectedLocation, onBack, onSelectShow }) {
           ))}
         </div>
       )}
+
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
