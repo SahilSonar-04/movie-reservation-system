@@ -51,103 +51,128 @@ function App() {
             CineBook
           </Link>
 
-          {user && (
-            <nav style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <Link
-                to="/"
-                style={{
-                  textDecoration: "none",
-                  color: location.pathname === "/" ? "#dc2626" : "#6b7280",
-                  fontWeight: location.pathname === "/" ? "600" : "500",
-                  padding: "8px 16px",
-                  borderRadius: "8px",
-                  background: location.pathname === "/" ? "#fef2f2" : "transparent",
-                  transition: "all 0.2s",
-                  fontSize: "14px",
-                }}
-              >
-                Movies
-              </Link>
+          <nav style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            {/* Movies link — always visible */}
+            <Link
+              to="/"
+              style={{
+                textDecoration: "none",
+                color: location.pathname === "/" ? "#dc2626" : "#6b7280",
+                fontWeight: location.pathname === "/" ? "600" : "500",
+                padding: "8px 16px",
+                borderRadius: "8px",
+                background: location.pathname === "/" ? "#fef2f2" : "transparent",
+                transition: "all 0.2s",
+                fontSize: "14px",
+              }}
+            >
+              Movies
+            </Link>
 
-              <Link
-                to="/my-bookings"
-                style={{
-                  textDecoration: "none",
-                  color: location.pathname === "/my-bookings" ? "#dc2626" : "#6b7280",
-                  fontWeight: location.pathname === "/my-bookings" ? "600" : "500",
-                  padding: "8px 16px",
-                  borderRadius: "8px",
-                  background: location.pathname === "/my-bookings" ? "#fef2f2" : "transparent",
-                  transition: "all 0.2s",
-                  fontSize: "14px",
-                }}
-              >
-                My Bookings
-              </Link>
-
-              {user.role === "ADMIN" && (
+            {user ? (
+              <>
                 <Link
-                  to="/admin"
+                  to="/my-bookings"
                   style={{
                     textDecoration: "none",
-                    color: location.pathname === "/admin" ? "#dc2626" : "#6b7280",
-                    fontWeight: location.pathname === "/admin" ? "600" : "500",
+                    color: location.pathname === "/my-bookings" ? "#dc2626" : "#6b7280",
+                    fontWeight: location.pathname === "/my-bookings" ? "600" : "500",
                     padding: "8px 16px",
                     borderRadius: "8px",
-                    background: location.pathname === "/admin" ? "#fef2f2" : "transparent",
+                    background: location.pathname === "/my-bookings" ? "#fef2f2" : "transparent",
                     transition: "all 0.2s",
                     fontSize: "14px",
                   }}
                 >
-                  Admin
+                  My Bookings
                 </Link>
-              )}
 
-              <div
-                style={{
-                  height: "24px",
-                  width: "1px",
-                  background: "#e5e7eb",
-                  margin: "0 8px",
-                }}
-              />
+                {user.role === "ADMIN" && (
+                  <Link
+                    to="/admin"
+                    style={{
+                      textDecoration: "none",
+                      color: location.pathname === "/admin" ? "#dc2626" : "#6b7280",
+                      fontWeight: location.pathname === "/admin" ? "600" : "500",
+                      padding: "8px 16px",
+                      borderRadius: "8px",
+                      background: location.pathname === "/admin" ? "#fef2f2" : "transparent",
+                      transition: "all 0.2s",
+                      fontSize: "14px",
+                    }}
+                  >
+                    Admin
+                  </Link>
+                )}
 
-              <span
-                style={{
-                  color: "#9ca3af",
-                  fontSize: "13px",
-                  padding: "0 8px",
-                }}
-              >
-                {user.role === "ADMIN" ? "Admin" : user.name || "User"}
-              </span>
+                <div style={{ height: "24px", width: "1px", background: "#e5e7eb", margin: "0 8px" }} />
 
-              <button
-                onClick={logout}
-                style={{
-                  padding: "8px 16px",
-                  background: "transparent",
-                  color: "#6b7280",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontSize: "14px",
-                  fontWeight: "500",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.borderColor = "#dc2626";
-                  e.target.style.color = "#dc2626";
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.borderColor = "#e5e7eb";
-                  e.target.style.color = "#6b7280";
-                }}
-              >
-                Sign Out
-              </button>
-            </nav>
-          )}
+                <span style={{ color: "#9ca3af", fontSize: "13px", padding: "0 8px" }}>
+                  {user.role === "ADMIN" ? "Admin" : user.name || "User"}
+                </span>
+
+                <button
+                  onClick={logout}
+                  style={{
+                    padding: "8px 16px",
+                    background: "transparent",
+                    color: "#6b7280",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.borderColor = "#dc2626";
+                    e.target.style.color = "#dc2626";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.borderColor = "#e5e7eb";
+                    e.target.style.color = "#6b7280";
+                  }}
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  style={{
+                    textDecoration: "none",
+                    color: location.pathname === "/login" ? "#dc2626" : "#6b7280",
+                    fontWeight: "500",
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    background: location.pathname === "/login" ? "#fef2f2" : "transparent",
+                    transition: "all 0.2s",
+                    fontSize: "14px",
+                  }}
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/register"
+                  style={{
+                    textDecoration: "none",
+                    color: "#fff",
+                    fontWeight: "500",
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    background: "#dc2626",
+                    transition: "all 0.2s",
+                    fontSize: "14px",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#b91c1c")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "#dc2626")}
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
+          </nav>
         </div>
       </header>
 
@@ -171,10 +196,7 @@ function App() {
           />
 
           {/* User Routes */}
-          <Route
-            path="/"
-            element={user ? <Movies /> : <Navigate to="/login" />}
-          />
+          <Route path="/" element={<Movies />} />
           <Route
             path="/my-bookings"
             element={user ? <MyBookings /> : <Navigate to="/login" />}

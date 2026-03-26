@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { Link } from "react-router-dom";
 import { Elements } from "@stripe/react-stripe-js";
 import api from "../services/api";
 import SeatGrid from "../components/SeatGrid";
@@ -15,6 +16,7 @@ function Seats({ show, onBack }) {
   const [showPayment, setShowPayment] = useState(false);
   const [clientSecret, setClientSecret] = useState("");
   const [paymentIntentId, setPaymentIntentId] = useState("");
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const selectedSeatsRef = useRef([]);
   const pricePerSeat = show.price;
 
@@ -41,7 +43,7 @@ function Seats({ show, onBack }) {
     return () => {
       const seatsToUnlock = selectedSeatsRef.current;
       if (seatsToUnlock.length > 0) {
-        api.post("/seats/unlock", { seatIds: seatsToUnlock }).catch(() => {});
+        api.post("/seats/unlock", { seatIds: seatsToUnlock }).catch(() => { });
       }
     };
   }, []);
@@ -56,6 +58,12 @@ function Seats({ show, onBack }) {
   };
 
   const toggleSeat = async (seat) => {
+    // Guest: show login prompt instead of locking
+    if (!user) {
+      setShowLoginPrompt(true);
+      return;
+    }
+
     if (loading || showPayment) return;
 
     const isSelected = selectedSeats.includes(seat._id);
@@ -93,6 +101,12 @@ function Seats({ show, onBack }) {
   };
 
   const initiatePayment = async () => {
+    // Guest: show login prompt
+    if (!user) {
+      setShowLoginPrompt(true);
+      return;
+    }
+
     if (selectedSeats.length === 0) {
       setError("Please select at least one seat");
       return;
@@ -148,6 +162,121 @@ function Seats({ show, onBack }) {
 
   const showDate = new Date(show.startTime);
   const totalAmount = selectedSeats.length * pricePerSeat;
+
+  // Login prompt modal (shown to guests who try to select a seat)
+  const LoginPromptModal = () => (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.5)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 2000,
+        padding: "24px",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) setShowLoginPrompt(false); }}
+    >
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: "16px",
+          padding: "40px",
+          maxWidth: "400px",
+          width: "100%",
+          textAlign: "center",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+        }}
+      >
+        {/* Icon */}
+        <div
+          style={{
+            width: "64px",
+            height: "64px",
+            background: "#fef2f2",
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 20px",
+          }}
+        >
+          <svg width="28" height="28" fill="none" stroke="#dc2626" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        </div>
+
+        <h2 style={{ margin: "0 0 8px", fontSize: "22px", fontWeight: "700", color: "#111827" }}>
+          Sign in to book seats
+        </h2>
+        <p style={{ margin: "0 0 28px", color: "#6b7280", fontSize: "14px", lineHeight: "1.6" }}>
+          You're browsing as a guest. Create a free account or sign in to select seats and complete your booking.
+        </p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <Link
+            to="/login"
+            style={{
+              display: "block",
+              padding: "13px",
+              background: "#dc2626",
+              color: "#fff",
+              borderRadius: "8px",
+              textDecoration: "none",
+              fontWeight: "600",
+              fontSize: "15px",
+              transition: "background 0.2s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#b91c1c")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "#dc2626")}
+          >
+            Sign In
+          </Link>
+          <Link
+            to="/register"
+            style={{
+              display: "block",
+              padding: "13px",
+              background: "transparent",
+              color: "#dc2626",
+              border: "1px solid #dc2626",
+              borderRadius: "8px",
+              textDecoration: "none",
+              fontWeight: "600",
+              fontSize: "15px",
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "#dc2626";
+              e.currentTarget.style.color = "#fff";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.color = "#dc2626";
+            }}
+          >
+            Create Free Account
+          </Link>
+          <button
+            onClick={() => setShowLoginPrompt(false)}
+            style={{
+              padding: "10px",
+              background: "transparent",
+              color: "#9ca3af",
+              border: "none",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "14px",
+            }}
+          >
+            Continue Browsing
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   // Payment Modal
   if (showPayment && clientSecret) {
@@ -223,6 +352,8 @@ function Seats({ show, onBack }) {
 
   return (
     <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
+      {/* Login prompt modal */}
+      {showLoginPrompt && <LoginPromptModal />}
       {/* Back Button */}
       <button
         onClick={handleBack}
@@ -391,6 +522,65 @@ function Seats({ show, onBack }) {
         </div>
       </div>
 
+      {/* Guest banner */}
+      {!user && (
+        <div
+          style={{
+            background: "#fffbeb",
+            border: "1px solid #fde68a",
+            borderRadius: "8px",
+            padding: "14px 18px",
+            marginBottom: "24px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <svg width="18" height="18" fill="none" stroke="#d97706" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span style={{ fontSize: "14px", color: "#92400e" }}>
+              You're browsing as a guest. Sign in to select and book seats.
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <Link
+              to="/login"
+              style={{
+                padding: "6px 14px",
+                background: "#d97706",
+                color: "#fff",
+                borderRadius: "6px",
+                textDecoration: "none",
+                fontSize: "13px",
+                fontWeight: "600",
+              }}
+            >
+              Sign In
+            </Link>
+            <Link
+              to="/register"
+              style={{
+                padding: "6px 14px",
+                background: "transparent",
+                color: "#d97706",
+                border: "1px solid #d97706",
+                borderRadius: "6px",
+                textDecoration: "none",
+                fontSize: "13px",
+                fontWeight: "600",
+              }}
+            >
+              Sign Up
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Screen */}
       <div style={{ marginBottom: "48px", textAlign: "center" }}>
         <div
@@ -442,49 +632,85 @@ function Seats({ show, onBack }) {
           bottom: "24px",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: user ? "20px" : "0" }}>
           <div>
-            <div style={{ fontSize: "14px", color: "#6b7280", marginBottom: "4px" }}>
-              Selected Seats: {selectedSeats.length} / 10
-            </div>
-            <div style={{ fontSize: "24px", fontWeight: "700", color: "#111827" }}>
-              Total: ₹{totalAmount}
-            </div>
+            {user ? (
+              <>
+                <div style={{ fontSize: "14px", color: "#6b7280", marginBottom: "4px" }}>
+                  Selected Seats: {selectedSeats.length} / 10
+                </div>
+                <div style={{ fontSize: "24px", fontWeight: "700", color: "#111827" }}>
+                  Total: ₹{totalAmount}
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize: "15px", color: "#6b7280" }}>
+                Sign in to select seats and book tickets
+              </div>
+            )}
           </div>
 
-          <button
-            onClick={initiatePayment}
-            disabled={loading || selectedSeats.length === 0}
-            style={{
-              padding: "14px 32px",
-              background: selectedSeats.length > 0 ? "#dc2626" : "#d1d5db",
-              color: "white",
-              border: "none",
-              borderRadius: "8px",
-              fontSize: "16px",
-              fontWeight: "600",
-              cursor: selectedSeats.length > 0 ? "pointer" : "not-allowed",
-              transition: "all 0.2s",
-              boxShadow: selectedSeats.length > 0 ? "0 2px 8px rgba(220, 38, 38, 0.3)" : "none",
-            }}
-            onMouseEnter={(e) => {
-              if (selectedSeats.length > 0 && !loading) {
+          {user ? (
+            <button
+              onClick={initiatePayment}
+              disabled={loading || selectedSeats.length === 0}
+              style={{
+                padding: "14px 32px",
+                background: selectedSeats.length > 0 ? "#dc2626" : "#d1d5db",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "16px",
+                fontWeight: "600",
+                cursor: selectedSeats.length > 0 ? "pointer" : "not-allowed",
+                transition: "all 0.2s",
+                boxShadow: selectedSeats.length > 0 ? "0 2px 8px rgba(220, 38, 38, 0.3)" : "none",
+              }}
+              onMouseEnter={(e) => {
+                if (selectedSeats.length > 0 && !loading) {
+                  e.target.style.background = "#b91c1c";
+                  e.target.style.transform = "translateY(-1px)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (selectedSeats.length > 0 && !loading) {
+                  e.target.style.background = "#dc2626";
+                  e.target.style.transform = "translateY(0)";
+                }
+              }}
+            >
+              {loading ? "Processing..." : "Proceed to Payment"}
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowLoginPrompt(true)}
+              style={{
+                padding: "14px 32px",
+                background: "#dc2626",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "16px",
+                fontWeight: "600",
+                cursor: "pointer",
+                transition: "all 0.2s",
+                boxShadow: "0 2px 8px rgba(220, 38, 38, 0.3)",
+              }}
+              onMouseEnter={(e) => {
                 e.target.style.background = "#b91c1c";
                 e.target.style.transform = "translateY(-1px)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (selectedSeats.length > 0 && !loading) {
+              }}
+              onMouseLeave={(e) => {
                 e.target.style.background = "#dc2626";
                 e.target.style.transform = "translateY(0)";
-              }
-            }}
-          >
-            {loading ? "Processing..." : "Proceed to Payment"}
-          </button>
+              }}
+            >
+              Sign In to Book
+            </button>
+          )}
         </div>
 
-        {selectedSeats.length > 0 && (
+        {user && selectedSeats.length > 0 && (
           <div style={{ fontSize: "12px", color: "#6b7280", textAlign: "center" }}>
             Seats will be locked for 5 minutes during payment
           </div>
