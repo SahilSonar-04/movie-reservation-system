@@ -1,5 +1,7 @@
 function ShowCard({ show, onSelect }) {
   const showDate = new Date(show.startTime);
+  const isPast = showDate < new Date();
+
   const formattedDate = showDate.toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
@@ -12,54 +14,85 @@ function ShowCard({ show, onSelect }) {
 
   return (
     <div
+      onClick={() => !isPast && onSelect && onSelect(show)}
       style={{
-        border: "1px solid #e0e0e0",
+        border: isPast ? "1px solid #f3f4f6" : "1px solid #e5e7eb",
         padding: "16px",
-        marginBottom: "12px",
-        cursor: "pointer",
+        cursor: isPast ? "not-allowed" : "pointer",
         borderRadius: "8px",
-        transition: "all 0.2s ease",
-        background: "#fff",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
+        transition: "all 0.2s",
+        background: isPast ? "#fafafa" : "#fff",
+        opacity: isPast ? 0.6 : 1,
       }}
-      onClick={() => onSelect(show)}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = "#f5f5f5";
-        e.currentTarget.style.borderColor = "#1890ff";
+        if (!isPast) {
+          e.currentTarget.style.borderColor = "#dc2626";
+          e.currentTarget.style.background = "#fef2f2";
+        }
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = "#fff";
-        e.currentTarget.style.borderColor = "#e0e0e0";
+        if (!isPast) {
+          e.currentTarget.style.borderColor = "#e5e7eb";
+          e.currentTarget.style.background = "#fff";
+        }
       }}
     >
-      <div style={{ flex: 1 }}>
-        <p style={{ margin: "0 0 8px 0", fontSize: "16px", fontWeight: "bold" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          marginBottom: "12px",
+        }}
+      >
+        <p style={{ margin: 0, fontSize: "15px", fontWeight: "600", color: "#111827" }}>
           {show.screen}
         </p>
+        <div
+          style={{
+            padding: "4px 10px",
+            background: isPast ? "#f3f4f6" : "#fef2f2",
+            color: isPast ? "#9ca3af" : "#dc2626",
+            borderRadius: "6px",
+            fontWeight: "600",
+            fontSize: "14px",
+          }}
+        >
+          ₹{show.price}
+        </div>
+      </div>
 
-        <p style={{ margin: "4px 0", fontSize: "14px", color: "#666" }}>
-          📅 {formattedDate}
-        </p>
-
-        <p style={{ margin: "4px 0", fontSize: "14px", color: "#666" }}>
-          🕐 {formattedTime}
-        </p>
+      <div style={{ fontSize: "13px", color: "#6b7280", marginBottom: "4px" }}>
+        {formattedDate}
       </div>
 
       <div
         style={{
-          padding: "8px 16px",
-          background: "#1890ff",
-          color: "white",
-          borderRadius: "4px",
-          fontWeight: "bold",
           fontSize: "16px",
+          fontWeight: "600",
+          color: isPast ? "#9ca3af" : "#dc2626",
         }}
       >
-        ₹{show.price}
+        {formattedTime}
       </div>
+
+      {isPast && (
+        <span
+          style={{
+            display: "inline-block",
+            marginTop: "8px",
+            fontSize: "11px",
+            padding: "4px 8px",
+            background: "#f3f4f6",
+            color: "#6b7280",
+            borderRadius: "4px",
+            fontWeight: "500",
+            textTransform: "uppercase",
+          }}
+        >
+          Show Ended
+        </span>
+      )}
     </div>
   );
 }

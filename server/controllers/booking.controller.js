@@ -2,9 +2,11 @@ import Seat from "../models/seat.model.js";
 import Booking from "../models/booking.model.js";
 import Show from "../models/show.model.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import ApiError from "../utils/ApiError.js";
 import { LOCK_TIME_MS } from "../config/lock.config.js";
 import { withTransaction } from "../utils/transaction.utils.js";
 import stripe from "../config/stripe.config.js";
+import { sendBookingConfirmationEmail } from "../utils/emailService.js";
 
 export const confirmBooking = asyncHandler(async (req, res) => {
   const { seatIds, showId, totalAmount } = req.body;
@@ -12,32 +14,26 @@ export const confirmBooking = asyncHandler(async (req, res) => {
   const now = new Date();
 
   if (!seatIds || seatIds.length === 0) {
-    return res.status(400).json({ message: "No seats provided" });
+    throw new ApiError(400, "No seats provided");
   }
 
-  // Check if show exists and is in the future
   const show = await Show.findById(showId);
-  if (!show) {
-    return res.status(404).json({ message: "Show not found" });
-  }
+  if (!show) throw new ApiError(404, "Show not found");
 
   if (new Date(show.startTime) <= now) {
-    return res.status(400).json({ message: "Cannot book seats for past shows" });
+    throw new ApiError(400, "Cannot book seats for past shows");
   }
 
-  // Use transaction for atomic booking
   const booking = await withTransaction(async (session) => {
-    // Fetch and validate seats
     const seats = await Seat.find({ _id: { $in: seatIds } }).session(session);
 
     if (seats.length !== seatIds.length) {
-      throw new Error("Some seats not found");
+      throw new ApiError(400, "Some seats not found");
     }
 
-    // Validate each seat
     for (const seat of seats) {
       if (seat.show.toString() !== showId.toString()) {
-        throw new Error(`Seat ${seat.seatNumber} belongs to a different show`);
+        throw new ApiError(400, `Seat ${seat.seatNumber} belongs to a different show`);
       }
 
       if (
@@ -46,19 +42,15 @@ export const confirmBooking = asyncHandler(async (req, res) => {
         seat.lockedBy.toString() !== userId.toString() ||
         now - seat.lockedAt > LOCK_TIME_MS
       ) {
-        throw new Error(`Seat ${seat.seatNumber} is not bookable`);
+        throw new ApiError(400, `Seat ${seat.seatNumber} is not bookable`);
       }
     }
 
-    // Validate total amount
     const expectedAmount = seats.length * show.price;
     if (Math.abs(totalAmount - expectedAmount) > 0.01) {
-      throw new Error(
-        `Total amount mismatch. Expected ${expectedAmount}, got ${totalAmount}`
-      );
+      throw new ApiError(400, `Total amount mismatch. Expected ${expectedAmount}, got ${totalAmount}`);
     }
 
-    // Atomically convert LOCKED → BOOKED
     const updateResult = await Seat.updateMany(
       {
         _id: { $in: seatIds },
@@ -67,52 +59,34 @@ export const confirmBooking = asyncHandler(async (req, res) => {
         lockedAt: { $gte: new Date(Date.now() - LOCK_TIME_MS) },
       },
       {
-        $set: {
-          status: "BOOKED",
-        },
-        $unset: {
-          lockedAt: "",
-          lockedBy: "",
-        },
+        $set: { status: "BOOKED" },
+        $unset: { lockedAt: "", lockedBy: "" },
       },
       { session }
     );
 
-    // If even one seat failed, abort
     if (updateResult.modifiedCount !== seatIds.length) {
-      throw new Error("One or more seats were booked by another user");
+      throw new ApiError(409, "One or more seats were booked by another user");
     }
 
-    // Create booking
     const newBooking = await Booking.create(
-      [
-        {
-          user: userId,
-          show: showId,
-          seats: seatIds,
-          totalAmount,
-          status: "CONFIRMED",
-        },
-      ],
+      [{ user: userId, show: showId, seats: seatIds, totalAmount, status: "CONFIRMED" }],
       { session }
     );
 
     return newBooking[0];
   });
 
-  // Populate before sending response
-  await booking.populate([
-    {
-      path: "show",
-      populate: { path: "movie theater" },
-    },
-    { path: "seats" },
-  ]);
+  await booking.populate([{ path: "show", populate: { path: "movie theater" } }, { path: "seats" }]);
 
-  res.status(201).json({
-    message: "Booking confirmed successfully",
+  // Send confirmation email (real implementation)
+  await sendBookingConfirmationEmail({
+    userEmail: req.user.email,
+    userName: req.user.name,
     booking,
   });
+
+  res.status(201).json({ message: "Booking confirmed successfully", booking });
 });
 
 export const cancelBooking = asyncHandler(async (req, res) => {
@@ -121,58 +95,42 @@ export const cancelBooking = asyncHandler(async (req, res) => {
 
   const booking = await Booking.findById(bookingId)
     .populate("seats")
-    .populate({
-      path: "show",
-      populate: { path: "movie" },
-    });
+    .populate({ path: "show", populate: { path: "movie" } });
 
-  if (!booking) {
-    return res.status(404).json({ message: "Booking not found" });
-  }
+  if (!booking) throw new ApiError(404, "Booking not found");
 
   if (booking.user.toString() !== userId.toString()) {
-    return res.status(403).json({ message: "Unauthorized cancellation" });
+    throw new ApiError(403, "Unauthorized cancellation");
   }
 
   if (booking.status === "CANCELLED") {
-    return res.status(400).json({ message: "Booking already cancelled" });
+    throw new ApiError(400, "Booking already cancelled");
   }
 
-  // Check if show is in the past
   if (new Date(booking.show.startTime) <= new Date()) {
-    return res
-      .status(400)
-      .json({ message: "Cannot cancel booking for past shows" });
+    throw new ApiError(400, "Cannot cancel booking for past shows");
   }
 
-  // Process refund if payment was made
   if (booking.paymentIntentId && booking.paymentStatus === "PAID") {
     try {
       const refund = await stripe.refunds.create({
         payment_intent: booking.paymentIntentId,
         reason: "requested_by_customer",
       });
-
       booking.paymentStatus = "REFUNDED";
       console.log(`Refund processed: ${refund.id}`);
     } catch (error) {
       console.error("Refund failed:", error);
-      return res.status(500).json({ 
-        message: "Failed to process refund. Please contact support." 
-      });
+      throw new ApiError(500, "Failed to process refund. Please contact support.");
     }
   }
 
-  // Use transaction for atomic cancellation
   await withTransaction(async (session) => {
     const seatIds = booking.seats.map((seat) => seat._id);
 
     await Seat.updateMany(
       { _id: { $in: seatIds } },
-      {
-        $set: { status: "FREE" },
-        $unset: { lockedAt: "", lockedBy: "" },
-      },
+      { $set: { status: "FREE" }, $unset: { lockedAt: "", lockedBy: "" } },
       { session }
     );
 
@@ -180,9 +138,9 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     await booking.save({ session });
   });
 
-  res.json({ 
+  res.json({
     message: "Booking cancelled successfully",
-    refundStatus: booking.paymentStatus === "REFUNDED" ? "Refund processed" : "No refund needed"
+    refundStatus: booking.paymentStatus === "REFUNDED" ? "Refund processed" : "No refund needed",
   });
 });
 
@@ -194,12 +152,7 @@ export const getMyBookings = asyncHandler(async (req, res) => {
 
   const [bookings, total] = await Promise.all([
     Booking.find({ user: userId })
-      .populate({
-        path: "show",
-        populate: {
-          path: "movie theater",
-        },
-      })
+      .populate({ path: "show", populate: { path: "movie theater" } })
       .populate("seats")
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -208,12 +161,7 @@ export const getMyBookings = asyncHandler(async (req, res) => {
   ]);
 
   res.json({
-    bookings, // ✅ Return as 'bookings' property
-    pagination: {
-      page,
-      limit,
-      total,
-      pages: Math.ceil(total / limit),
-    },
+    bookings,
+    pagination: { page, limit, total, pages: Math.ceil(total / limit) },
   });
 });

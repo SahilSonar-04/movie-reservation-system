@@ -4,8 +4,42 @@ import { Elements } from "@stripe/react-stripe-js";
 import api from "../services/api";
 import SeatGrid from "../components/SeatGrid";
 import CheckoutForm from "../components/CheckoutForm";
+import BookingTicket from "../components/BookingTicket";
 import { useAuth } from "../context/AuthContext";
 import { stripePromise } from "../config/stripe.config";
+import { LOCK_TIME_MS } from "../config/lock.config";
+
+// Countdown timer hook — counts down from lockStartTime to lockStartTime + LOCK_TIME_MS
+function useLockCountdown(lockStartTime, isActive) {
+  const [timeLeft, setTimeLeft] = useState(null);
+
+  useEffect(() => {
+    if (!isActive || !lockStartTime) {
+      setTimeLeft(null);
+      return;
+    }
+
+    const tick = () => {
+      const elapsed = Date.now() - lockStartTime;
+      const remaining = Math.max(0, LOCK_TIME_MS - elapsed);
+      setTimeLeft(remaining);
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [lockStartTime, isActive]);
+
+  return timeLeft;
+}
+
+function formatCountdown(ms) {
+  if (ms === null) return null;
+  const totalSeconds = Math.ceil(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
 
 function Seats({ show, onBack }) {
   const { user } = useAuth();
@@ -17,11 +51,24 @@ function Seats({ show, onBack }) {
   const [clientSecret, setClientSecret] = useState("");
   const [paymentIntentId, setPaymentIntentId] = useState("");
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [completedBooking, setCompletedBooking] = useState(null); // for ticket modal
+  const [lockStartTime, setLockStartTime] = useState(null); // when first seat was locked
   const selectedSeatsRef = useRef([]);
   const pricePerSeat = show.price;
 
+  // Countdown timer
+  const timeLeft = useLockCountdown(lockStartTime, selectedSeats.length > 0 && !showPayment);
+  const isExpiringSoon = timeLeft !== null && timeLeft < 60000; // < 1 minute
+
   useEffect(() => {
     selectedSeatsRef.current = selectedSeats;
+  }, [selectedSeats]);
+
+  // When all seats deselected, reset lock timer
+  useEffect(() => {
+    if (selectedSeats.length === 0) {
+      setLockStartTime(null);
+    }
   }, [selectedSeats]);
 
   const fetchSeats = async () => {
@@ -39,75 +86,41 @@ function Seats({ show, onBack }) {
     const POLL_INTERVAL = 5000;
     let interval = null;
 
-    const startPolling = () => {
-      if (!interval) {
-        interval = setInterval(fetchSeats, POLL_INTERVAL);
-      }
-    };
-
-    const stopPolling = () => {
-      if (interval) {
-        clearInterval(interval);
-        interval = null;
-      }
-    };
+    const startPolling = () => { if (!interval) interval = setInterval(fetchSeats, POLL_INTERVAL); };
+    const stopPolling = () => { if (interval) { clearInterval(interval); interval = null; } };
 
     const handleVisibilityChange = () => {
-      if (document.hidden) {
-        stopPolling();
-      } else {
-        fetchSeats();
-        startPolling();
-      }
+      if (document.hidden) stopPolling();
+      else { fetchSeats(); startPolling(); }
     };
 
     startPolling();
     document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      stopPolling();
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
+    return () => { stopPolling(); document.removeEventListener("visibilitychange", handleVisibilityChange); };
   }, [show._id]);
 
   useEffect(() => {
     return () => {
       const seatsToUnlock = selectedSeatsRef.current;
       if (seatsToUnlock.length > 0) {
-        api.post("/seats/unlock", { seatIds: seatsToUnlock }).catch(() => { });
+        api.post("/seats/unlock", { seatIds: seatsToUnlock }).catch(() => {});
       }
     };
   }, []);
 
   const unlockSeats = async (seatIds) => {
     if (seatIds.length === 0) return;
-    try {
-      await api.post("/seats/unlock", { seatIds });
-    } catch (err) {
-      console.error("Failed to unlock", err);
-    }
+    try { await api.post("/seats/unlock", { seatIds }); } catch (err) { console.error("Failed to unlock", err); }
   };
 
   const toggleSeat = async (seat) => {
-    // Guest: show login prompt instead of locking
-    if (!user) {
-      setShowLoginPrompt(true);
-      return;
-    }
-
+    if (!user) { setShowLoginPrompt(true); return; }
     if (loading || showPayment) return;
 
     const isSelected = selectedSeats.includes(seat._id);
 
-    if (seat.status === "BOOKED") {
-      setError("This seat is already booked");
-      return;
-    }
-
-    if (seat.status === "LOCKED" && !isSelected) {
-      setError("This seat is locked by another user");
-      return;
-    }
+    if (seat.status === "BOOKED") { setError("This seat is already booked"); return; }
+    if (seat.status === "LOCKED" && !isSelected) { setError("This seat is locked by another user"); return; }
 
     setLoading(true);
     setError("");
@@ -119,8 +132,9 @@ function Seats({ show, onBack }) {
       } else {
         await api.post("/seats/lock", { seatIds: [seat._id] });
         setSelectedSeats((prev) => [...prev, seat._id]);
+        // Start timer when first seat is locked
+        if (selectedSeats.length === 0) setLockStartTime(Date.now());
       }
-
       await fetchSeats();
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.message || "Failed to lock/unlock seat";
@@ -132,14 +146,16 @@ function Seats({ show, onBack }) {
   };
 
   const initiatePayment = async () => {
-    // Guest: show login prompt
-    if (!user) {
-      setShowLoginPrompt(true);
-      return;
-    }
+    if (!user) { setShowLoginPrompt(true); return; }
+    if (selectedSeats.length === 0) { setError("Please select at least one seat"); return; }
 
-    if (selectedSeats.length === 0) {
-      setError("Please select at least one seat");
+    // Check if lock has expired
+    if (lockStartTime && Date.now() - lockStartTime >= LOCK_TIME_MS) {
+      setError("Your seat locks have expired. Please re-select your seats.");
+      setSelectedSeats([]);
+      selectedSeatsRef.current = [];
+      setLockStartTime(null);
+      await fetchSeats();
       return;
     }
 
@@ -147,12 +163,7 @@ function Seats({ show, onBack }) {
     setError("");
 
     try {
-      // Create payment intent
-      const response = await api.post("/payments/create-payment-intent", {
-        seatIds: selectedSeats,
-        showId: show._id,
-      });
-
+      const response = await api.post("/payments/create-payment-intent", { seatIds: selectedSeats, showId: show._id });
       setClientSecret(response.data.clientSecret);
       setPaymentIntentId(response.data.paymentIntentId);
       setShowPayment(true);
@@ -161,6 +172,7 @@ function Seats({ show, onBack }) {
       setError(errorMsg);
       setSelectedSeats([]);
       selectedSeatsRef.current = [];
+      setLockStartTime(null);
       await fetchSeats();
     } finally {
       setLoading(false);
@@ -171,210 +183,72 @@ function Seats({ show, onBack }) {
     setShowPayment(false);
     setSelectedSeats([]);
     selectedSeatsRef.current = [];
-    alert("Booking confirmed successfully! Payment completed.");
-    onBack();
+    setLockStartTime(null);
+    // TODO: send email via Nodemailer/SendGrid with booking ticket as HTML/PDF attachment
+    setCompletedBooking(booking);
   };
 
   const handlePaymentCancel = async () => {
     setShowPayment(false);
     setClientSecret("");
     setPaymentIntentId("");
-    // Keep seats locked, user can try payment again
   };
 
   const handleBack = async () => {
-    if (selectedSeats.length > 0 && !showPayment) {
-      await unlockSeats(selectedSeats);
-    }
+    if (selectedSeats.length > 0 && !showPayment) await unlockSeats(selectedSeats);
     setSelectedSeats([]);
     selectedSeatsRef.current = [];
+    setLockStartTime(null);
     onBack();
   };
 
   const showDate = new Date(show.startTime);
   const totalAmount = selectedSeats.length * pricePerSeat;
 
-  // Login prompt modal (shown to guests who try to select a seat)
   const LoginPromptModal = () => (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.5)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 2000,
-        padding: "24px",
-      }}
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2000, padding: "24px" }}
       onClick={(e) => { if (e.target === e.currentTarget) setShowLoginPrompt(false); }}
     >
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: "16px",
-          padding: "40px",
-          maxWidth: "400px",
-          width: "100%",
-          textAlign: "center",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
-        }}
-      >
-        {/* Icon */}
-        <div
-          style={{
-            width: "64px",
-            height: "64px",
-            background: "#fef2f2",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 20px",
-          }}
-        >
+      <div style={{ background: "#fff", borderRadius: "16px", padding: "40px", maxWidth: "400px", width: "100%", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
+        <div style={{ width: "64px", height: "64px", background: "#fef2f2", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
           <svg width="28" height="28" fill="none" stroke="#dc2626" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
         </div>
-
-        <h2 style={{ margin: "0 0 8px", fontSize: "22px", fontWeight: "700", color: "#111827" }}>
-          Sign in to book seats
-        </h2>
-        <p style={{ margin: "0 0 28px", color: "#6b7280", fontSize: "14px", lineHeight: "1.6" }}>
-          You're browsing as a guest. Create a free account or sign in to select seats and complete your booking.
-        </p>
-
+        <h2 style={{ margin: "0 0 8px", fontSize: "22px", fontWeight: "700", color: "#111827" }}>Sign in to book seats</h2>
+        <p style={{ margin: "0 0 28px", color: "#6b7280", fontSize: "14px", lineHeight: "1.6" }}>You're browsing as a guest. Create a free account or sign in to select seats and complete your booking.</p>
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <Link
-            to="/login"
-            style={{
-              display: "block",
-              padding: "13px",
-              background: "#dc2626",
-              color: "#fff",
-              borderRadius: "8px",
-              textDecoration: "none",
-              fontWeight: "600",
-              fontSize: "15px",
-              transition: "background 0.2s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#b91c1c")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "#dc2626")}
-          >
-            Sign In
-          </Link>
-          <Link
-            to="/register"
-            style={{
-              display: "block",
-              padding: "13px",
-              background: "transparent",
-              color: "#dc2626",
-              border: "1px solid #dc2626",
-              borderRadius: "8px",
-              textDecoration: "none",
-              fontWeight: "600",
-              fontSize: "15px",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#dc2626";
-              e.currentTarget.style.color = "#fff";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = "#dc2626";
-            }}
-          >
-            Create Free Account
-          </Link>
-          <button
-            onClick={() => setShowLoginPrompt(false)}
-            style={{
-              padding: "10px",
-              background: "transparent",
-              color: "#9ca3af",
-              border: "none",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontSize: "14px",
-            }}
-          >
-            Continue Browsing
-          </button>
+          <Link to="/login" style={{ display: "block", padding: "13px", background: "#dc2626", color: "#fff", borderRadius: "8px", textDecoration: "none", fontWeight: "600", fontSize: "15px" }}>Sign In</Link>
+          <Link to="/register" style={{ display: "block", padding: "13px", background: "transparent", color: "#dc2626", border: "1px solid #dc2626", borderRadius: "8px", textDecoration: "none", fontWeight: "600", fontSize: "15px" }}>Create Free Account</Link>
+          <button onClick={() => setShowLoginPrompt(false)} style={{ padding: "10px", background: "transparent", color: "#9ca3af", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "14px" }}>Continue Browsing</button>
         </div>
       </div>
     </div>
   );
 
-  // Payment Modal
+  // Ticket modal after successful booking
+  if (completedBooking) {
+    return (
+      <BookingTicket
+        booking={completedBooking}
+        onClose={() => { setCompletedBooking(null); onBack(); }}
+      />
+    );
+  }
+
   if (showPayment && clientSecret) {
     return (
       <div style={{ maxWidth: "600px", margin: "0 auto" }}>
-        {/* Header */}
-        <div
-          style={{
-            background: "#fff",
-            padding: "24px",
-            borderRadius: "12px",
-            marginBottom: "24px",
-            border: "1px solid #e5e7eb",
-            boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
-          }}
-        >
-          <h1 style={{ margin: "0 0 8px 0", fontSize: "24px", fontWeight: "700", color: "#111827" }}>
-            Complete Payment
-          </h1>
-          <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>
-            {show.movie?.title} at {show.theater?.name}
-          </p>
+        <div style={{ background: "#fff", padding: "24px", borderRadius: "12px", marginBottom: "24px", border: "1px solid #e5e7eb", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)" }}>
+          <h1 style={{ margin: "0 0 8px 0", fontSize: "24px", fontWeight: "700", color: "#111827" }}>Complete Payment</h1>
+          <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>{show.movie?.title} at {show.theater?.name}</p>
         </div>
-
-        {/* Stripe Payment Form */}
-        <div
-          style={{
-            background: "#fff",
-            padding: "24px",
-            borderRadius: "12px",
-            border: "1px solid #e5e7eb",
-            boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
-          }}
-        >
-          <Elements
-            stripe={stripePromise}
-            options={{
-              clientSecret,
-              appearance: {
-                theme: "stripe",
-                variables: {
-                  colorPrimary: "#dc2626",
-                },
-              },
-            }}
-          >
-            <CheckoutForm
-              amount={totalAmount}
-              seatCount={selectedSeats.length}
-              onSuccess={handlePaymentSuccess}
-              onCancel={handlePaymentCancel}
-            />
+        <div style={{ background: "#fff", padding: "24px", borderRadius: "12px", border: "1px solid #e5e7eb", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)" }}>
+          <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: "stripe", variables: { colorPrimary: "#dc2626" } } }}>
+            <CheckoutForm amount={totalAmount} seatCount={selectedSeats.length} onSuccess={handlePaymentSuccess} onCancel={handlePaymentCancel} />
           </Elements>
         </div>
-
-        {/* Security Notice */}
-        <div
-          style={{
-            marginTop: "24px",
-            padding: "16px",
-            background: "#f0fdf4",
-            border: "1px solid #bbf7d0",
-            borderRadius: "8px",
-            fontSize: "13px",
-            color: "#166534",
-          }}
-        >
+        <div style={{ marginTop: "24px", padding: "16px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "8px", fontSize: "13px", color: "#166534" }}>
           <strong>Your seats are locked</strong> for the next 5 minutes while you complete payment.
         </div>
       </div>
@@ -383,299 +257,104 @@ function Seats({ show, onBack }) {
 
   return (
     <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
-      {/* Login prompt modal */}
       {showLoginPrompt && <LoginPromptModal />}
+
       {/* Back Button */}
-      <button
-        onClick={handleBack}
-        disabled={showPayment}
-        style={{
-          padding: "10px 20px",
-          marginBottom: "24px",
-          background: "transparent",
-          border: "1px solid #e5e7eb",
-          borderRadius: "8px",
-          cursor: showPayment ? "not-allowed" : "pointer",
-          fontSize: "14px",
-          fontWeight: "500",
-          color: "#6b7280",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          transition: "all 0.2s",
-          opacity: showPayment ? 0.5 : 1,
-        }}
-        onMouseEnter={(e) => {
-          if (!showPayment) {
-            e.target.style.borderColor = "#dc2626";
-            e.target.style.color = "#dc2626";
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!showPayment) {
-            e.target.style.borderColor = "#e5e7eb";
-            e.target.style.color = "#6b7280";
-          }
-        }}
+      <button onClick={handleBack} disabled={showPayment}
+        style={{ padding: "10px 20px", marginBottom: "24px", background: "transparent", border: "1px solid #e5e7eb", borderRadius: "8px", cursor: showPayment ? "not-allowed" : "pointer", fontSize: "14px", fontWeight: "500", color: "#6b7280", display: "flex", alignItems: "center", gap: "8px", transition: "all 0.2s", opacity: showPayment ? 0.5 : 1 }}
+        onMouseEnter={(e) => { if (!showPayment) { e.target.style.borderColor = "#dc2626"; e.target.style.color = "#dc2626"; } }}
+        onMouseLeave={(e) => { if (!showPayment) { e.target.style.borderColor = "#e5e7eb"; e.target.style.color = "#6b7280"; } }}
       >
-        <svg
-          width="16"
-          height="16"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 19l-7-7 7-7"
-          />
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
         Back to Shows
       </button>
 
       {/* Header */}
-      <div
-        style={{
-          background: "#fff",
-          padding: "24px",
-          borderRadius: "12px",
-          marginBottom: "32px",
-          border: "1px solid #e5e7eb",
-          boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
-        }}
-      >
-        <h1 style={{ margin: "0 0 16px 0", fontSize: "28px", fontWeight: "700", color: "#111827" }}>
-          Select Your Seats
-        </h1>
+      <div style={{ background: "#fff", padding: "24px", borderRadius: "12px", marginBottom: "32px", border: "1px solid #e5e7eb", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)" }}>
+        <h1 style={{ margin: "0 0 16px 0", fontSize: "28px", fontWeight: "700", color: "#111827" }}>Select Your Seats</h1>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "24px", color: "#6b7280", fontSize: "14px" }}>
-          <div>
-            <span style={{ fontWeight: "600", color: "#111827" }}>Theater:</span>{" "}
-            {show.theater?.name || show.screen}
-          </div>
-          <div>
-            <span style={{ fontWeight: "600", color: "#111827" }}>Show:</span>{" "}
-            {showDate.toLocaleString("en-US", {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </div>
-          <div>
-            <span style={{ fontWeight: "600", color: "#111827" }}>Price:</span>{" "}
-            ₹{pricePerSeat} per seat
-          </div>
+          <div><span style={{ fontWeight: "600", color: "#111827" }}>Theater:</span> {show.theater?.name || show.screen}</div>
+          <div><span style={{ fontWeight: "600", color: "#111827" }}>Show:</span> {showDate.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+          <div><span style={{ fontWeight: "600", color: "#111827" }}>Price:</span> ₹{pricePerSeat} per seat</div>
         </div>
       </div>
 
       {/* Error Message */}
       {error && (
-        <div
-          style={{
-            background: "#fef2f2",
-            border: "1px solid #fecaca",
-            color: "#991b1b",
-            padding: "12px 16px",
-            borderRadius: "8px",
-            marginBottom: "24px",
-            fontSize: "14px",
-          }}
-        >
+        <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b", padding: "12px 16px", borderRadius: "8px", marginBottom: "24px", fontSize: "14px" }}>
           {error}
         </div>
       )}
 
-      {/* Legend */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          gap: "32px",
-          marginBottom: "32px",
-          fontSize: "13px",
-          flexWrap: "wrap",
-          padding: "16px",
-          background: "#fff",
-          borderRadius: "8px",
-          border: "1px solid #e5e7eb",
-        }}
-      >
+      {/* Legend — colors now match Seat.jsx exactly */}
+      <div style={{ display: "flex", justifyContent: "center", gap: "32px", marginBottom: "32px", fontSize: "13px", flexWrap: "wrap", padding: "16px", background: "#fff", borderRadius: "8px", border: "1px solid #e5e7eb" }}>
+        {/* Available: #e0e0e0 bg, #ccc border — matches Seat.jsx FREE state */}
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <div
-            style={{
-              width: "24px",
-              height: "24px",
-              background: "#f3f4f6",
-              border: "2px solid #d1d5db",
-              borderRadius: "4px",
-            }}
-          />
+          <div style={{ width: "24px", height: "24px", background: "#e0e0e0", border: "2px solid #ccc", borderRadius: "4px" }} />
           <span style={{ color: "#4b5563" }}>Available</span>
         </div>
+        {/* Selected: #1890ff bg, #0050b3 border — matches Seat.jsx selected state */}
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <div
-            style={{
-              width: "24px",
-              height: "24px",
-              background: "#dc2626",
-              border: "2px solid #b91c1c",
-              borderRadius: "4px",
-            }}
-          />
+          <div style={{ width: "24px", height: "24px", background: "#1890ff", border: "2px solid #0050b3", borderRadius: "4px" }} />
           <span style={{ color: "#4b5563" }}>Selected</span>
         </div>
+        {/* Locked: #faad14 bg — matches Seat.jsx LOCKED state */}
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <div
-            style={{
-              width: "24px",
-              height: "24px",
-              background: "#fef3c7",
-              border: "2px solid #fde047",
-              borderRadius: "4px",
-            }}
-          />
+          <div style={{ width: "24px", height: "24px", background: "#faad14", border: "2px solid #faad14", borderRadius: "4px" }} />
           <span style={{ color: "#4b5563" }}>Locked</span>
         </div>
+        {/* Booked: #ff4d4f bg — matches Seat.jsx BOOKED state */}
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <div
-            style={{
-              width: "24px",
-              height: "24px",
-              background: "#fee2e2",
-              border: "2px solid #fca5a5",
-              borderRadius: "4px",
-            }}
-          />
+          <div style={{ width: "24px", height: "24px", background: "#ff4d4f", border: "2px solid #ff4d4f", borderRadius: "4px" }} />
           <span style={{ color: "#4b5563" }}>Booked</span>
         </div>
       </div>
 
       {/* Guest banner */}
       {!user && (
-        <div
-          style={{
-            background: "#fffbeb",
-            border: "1px solid #fde68a",
-            borderRadius: "8px",
-            padding: "14px 18px",
-            marginBottom: "24px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "12px",
-            flexWrap: "wrap",
-          }}
-        >
+        <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "8px", padding: "14px 18px", marginBottom: "24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <svg width="18" height="18" fill="none" stroke="#d97706" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span style={{ fontSize: "14px", color: "#92400e" }}>
-              You're browsing as a guest. Sign in to select and book seats.
-            </span>
+            <span style={{ fontSize: "14px", color: "#92400e" }}>You're browsing as a guest. Sign in to select and book seats.</span>
           </div>
           <div style={{ display: "flex", gap: "8px" }}>
-            <Link
-              to="/login"
-              style={{
-                padding: "6px 14px",
-                background: "#d97706",
-                color: "#fff",
-                borderRadius: "6px",
-                textDecoration: "none",
-                fontSize: "13px",
-                fontWeight: "600",
-              }}
-            >
-              Sign In
-            </Link>
-            <Link
-              to="/register"
-              style={{
-                padding: "6px 14px",
-                background: "transparent",
-                color: "#d97706",
-                border: "1px solid #d97706",
-                borderRadius: "6px",
-                textDecoration: "none",
-                fontSize: "13px",
-                fontWeight: "600",
-              }}
-            >
-              Sign Up
-            </Link>
+            <Link to="/login" style={{ padding: "6px 14px", background: "#d97706", color: "#fff", borderRadius: "6px", textDecoration: "none", fontSize: "13px", fontWeight: "600" }}>Sign In</Link>
+            <Link to="/register" style={{ padding: "6px 14px", background: "transparent", color: "#d97706", border: "1px solid #d97706", borderRadius: "6px", textDecoration: "none", fontSize: "13px", fontWeight: "600" }}>Sign Up</Link>
           </div>
         </div>
       )}
 
       {/* Screen */}
       <div style={{ marginBottom: "48px", textAlign: "center" }}>
-        <div
-          style={{
-            maxWidth: "700px",
-            margin: "0 auto",
-            padding: "16px",
-            background: "linear-gradient(180deg, #f9fafb 0%, #fff 100%)",
-            border: "2px solid #e5e7eb",
-            borderBottom: "4px solid #9ca3af",
-            borderRadius: "12px 12px 0 0",
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-          }}
-        >
-          <p
-            style={{
-              margin: 0,
-              fontSize: "13px",
-              fontWeight: "600",
-              color: "#6b7280",
-              textTransform: "uppercase",
-              letterSpacing: "1px",
-            }}
-          >
-            Screen This Way
-          </p>
+        <div style={{ maxWidth: "700px", margin: "0 auto", padding: "16px", background: "linear-gradient(180deg, #f9fafb 0%, #fff 100%)", border: "2px solid #e5e7eb", borderBottom: "4px solid #9ca3af", borderRadius: "12px 12px 0 0", boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)" }}>
+          <p style={{ margin: 0, fontSize: "13px", fontWeight: "600", color: "#6b7280", textTransform: "uppercase", letterSpacing: "1px" }}>Screen This Way</p>
         </div>
       </div>
 
       {/* Seats Grid */}
       <div style={{ display: "flex", justifyContent: "center", marginBottom: "48px", position: "relative" }}>
         {loading && (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "rgba(255,255,255,0.6)",
-              zIndex: 10,
-              borderRadius: "8px",
-              cursor: "not-allowed",
-            }}
-          />
+          <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.6)", zIndex: 10, borderRadius: "8px", cursor: "not-allowed" }} />
         )}
-        <SeatGrid
-          seats={seats}
-          selectedSeats={selectedSeats}
-          onSeatClick={toggleSeat}
-          userId={user?._id}
-        />
+        <SeatGrid seats={seats} selectedSeats={selectedSeats} onSeatClick={toggleSeat} userId={user?._id} />
       </div>
 
-      {/* Booking Summary */}
-      <div
-        style={{
-          background: "#fff",
-          padding: "24px",
-          borderRadius: "12px",
-          border: "1px solid #e5e7eb",
-          boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
-          position: "sticky",
-          bottom: "24px",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: user ? "20px" : "0" }}>
+      {/* Booking Summary Bar */}
+      <div style={{
+        background: "#fff",
+        padding: "24px",
+        borderRadius: "12px",
+        border: isExpiringSoon ? "2px solid #f59e0b" : "1px solid #e5e7eb",
+        boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
+        position: "sticky",
+        bottom: "24px",
+        transition: "border-color 0.3s",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: user ? "12px" : "0" }}>
           <div>
             {user ? (
               <>
@@ -687,9 +366,7 @@ function Seats({ show, onBack }) {
                 </div>
               </>
             ) : (
-              <div style={{ fontSize: "15px", color: "#6b7280" }}>
-                Sign in to select seats and book tickets
-              </div>
+              <div style={{ fontSize: "15px", color: "#6b7280" }}>Sign in to select seats and book tickets</div>
             )}
           </div>
 
@@ -697,68 +374,57 @@ function Seats({ show, onBack }) {
             <button
               onClick={initiatePayment}
               disabled={loading || selectedSeats.length === 0}
-              style={{
-                padding: "14px 32px",
-                background: selectedSeats.length > 0 ? "#dc2626" : "#d1d5db",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "16px",
-                fontWeight: "600",
-                cursor: selectedSeats.length > 0 ? "pointer" : "not-allowed",
-                transition: "all 0.2s",
-                boxShadow: selectedSeats.length > 0 ? "0 2px 8px rgba(220, 38, 38, 0.3)" : "none",
-              }}
-              onMouseEnter={(e) => {
-                if (selectedSeats.length > 0 && !loading) {
-                  e.target.style.background = "#b91c1c";
-                  e.target.style.transform = "translateY(-1px)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (selectedSeats.length > 0 && !loading) {
-                  e.target.style.background = "#dc2626";
-                  e.target.style.transform = "translateY(0)";
-                }
-              }}
+              style={{ padding: "14px 32px", background: selectedSeats.length > 0 ? "#dc2626" : "#d1d5db", color: "white", border: "none", borderRadius: "8px", fontSize: "16px", fontWeight: "600", cursor: selectedSeats.length > 0 ? "pointer" : "not-allowed", transition: "all 0.2s", boxShadow: selectedSeats.length > 0 ? "0 2px 8px rgba(220, 38, 38, 0.3)" : "none" }}
+              onMouseEnter={(e) => { if (selectedSeats.length > 0 && !loading) { e.target.style.background = "#b91c1c"; e.target.style.transform = "translateY(-1px)"; } }}
+              onMouseLeave={(e) => { if (selectedSeats.length > 0 && !loading) { e.target.style.background = "#dc2626"; e.target.style.transform = "translateY(0)"; } }}
             >
               {loading ? "Processing..." : "Proceed to Payment"}
             </button>
           ) : (
-            <button
-              onClick={() => setShowLoginPrompt(true)}
-              style={{
-                padding: "14px 32px",
-                background: "#dc2626",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "16px",
-                fontWeight: "600",
-                cursor: "pointer",
-                transition: "all 0.2s",
-                boxShadow: "0 2px 8px rgba(220, 38, 38, 0.3)",
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.background = "#b91c1c";
-                e.target.style.transform = "translateY(-1px)";
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.background = "#dc2626";
-                e.target.style.transform = "translateY(0)";
-              }}
+            <button onClick={() => setShowLoginPrompt(true)}
+              style={{ padding: "14px 32px", background: "#dc2626", color: "white", border: "none", borderRadius: "8px", fontSize: "16px", fontWeight: "600", cursor: "pointer", transition: "all 0.2s", boxShadow: "0 2px 8px rgba(220, 38, 38, 0.3)" }}
+              onMouseEnter={(e) => { e.target.style.background = "#b91c1c"; e.target.style.transform = "translateY(-1px)"; }}
+              onMouseLeave={(e) => { e.target.style.background = "#dc2626"; e.target.style.transform = "translateY(0)"; }}
             >
               Sign In to Book
             </button>
           )}
         </div>
 
-        {user && selectedSeats.length > 0 && (
-          <div style={{ fontSize: "12px", color: "#6b7280", textAlign: "center" }}>
-            Seats will be locked for 5 minutes during payment
+        {/* Lock countdown timer */}
+        {user && selectedSeats.length > 0 && timeLeft !== null && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "10px 14px",
+              background: isExpiringSoon ? "#fffbeb" : "#f0fdf4",
+              border: `1px solid ${isExpiringSoon ? "#fde68a" : "#bbf7d0"}`,
+              borderRadius: "8px",
+              fontSize: "13px",
+              color: isExpiringSoon ? "#92400e" : "#166534",
+            }}
+          >
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {isExpiringSoon ? (
+              <span><strong>Hurry!</strong> Seats locked for <strong>{formatCountdown(timeLeft)}</strong> — complete payment soon</span>
+            ) : (
+              <span>Seats locked for <strong>{formatCountdown(timeLeft)}</strong></span>
+            )}
+          </div>
+        )}
+
+        {user && selectedSeats.length === 0 && (
+          <div style={{ fontSize: "12px", color: "#9ca3af", textAlign: "center" }}>
+            Select seats above to proceed
           </div>
         )}
       </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
