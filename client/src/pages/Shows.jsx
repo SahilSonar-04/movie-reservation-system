@@ -6,18 +6,24 @@ function Shows({ movie, selectedLocation, onBack, onSelectShow }) {
   const [filteredShows, setFilteredShows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [notFound, setNotFound] = useState(false);
   const [filterLocation, setFilterLocation] = useState(selectedLocation || "all");
 
   useEffect(() => {
     const fetchShows = async () => {
       try {
         setError("");
+        setNotFound(false);
         const res = await api.get(`/shows/movie/${movie._id}`);
         setAllShows(res.data);
         setFilteredShows(res.data);
       } catch (err) {
         console.error("Failed to load shows", err);
-        setError("Failed to load shows. Please try again.");
+        if (err.response?.status === 404) {
+          setNotFound(true);
+        } else {
+          setError("Failed to load shows. Please try again.");
+        }
       } finally {
         setLoading(false);
       }
@@ -176,6 +182,41 @@ function Shows({ movie, selectedLocation, onBack, onSelectShow }) {
           }}
         >
           {error}
+        </div>
+      )}
+
+      {/* Not Found State */}
+      {notFound && (
+        <div
+          style={{
+            textAlign: "center",
+            padding: "60px 20px",
+            background: "#fff",
+            borderRadius: "12px",
+            border: "1px solid #e5e7eb",
+          }}
+        >
+          <div style={{ fontSize: "48px", marginBottom: "16px" }}>🎬</div>
+          <h3 style={{ margin: "0 0 8px 0", color: "#111827", fontSize: "18px" }}>
+            Movie not found
+          </h3>
+          <p style={{ color: "#6b7280", marginBottom: "20px", fontSize: "14px" }}>
+            This movie doesn't exist or may have been removed.
+          </p>
+          <button
+            onClick={onBack}
+            style={{
+              padding: "10px 20px",
+              background: "#dc2626",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontWeight: "500",
+            }}
+          >
+            Back to Movies
+          </button>
         </div>
       )}
 

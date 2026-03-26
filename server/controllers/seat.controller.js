@@ -6,6 +6,8 @@ import asyncHandler from "../utils/asyncHandler.js";
 // ADMIN: Generate seats for a show
 export const generateSeatsForShow = asyncHandler(async (req, res) => {
   const { showId } = req.params;
+  const rows = Math.min(Math.max(parseInt(req.body.rows) || 5, 1), 10);
+  const seatsPerRow = Math.min(Math.max(parseInt(req.body.seatsPerRow) || 10, 1), 20);
 
   const show = await Show.findById(showId);
   if (!show) {
@@ -20,10 +22,7 @@ export const generateSeatsForShow = asyncHandler(async (req, res) => {
       .json({ message: "Seats already generated for this show" });
   }
 
-  const seatNumbers = generateSeats({
-    rows: 5,
-    seatsPerRow: 10,
-  });
+  const seatNumbers = generateSeats({ rows, seatsPerRow });
 
   const seatDocs = seatNumbers.map((seat) => ({
     show: showId,
@@ -35,6 +34,7 @@ export const generateSeatsForShow = asyncHandler(async (req, res) => {
   res.json({
     message: "Seats generated successfully",
     totalSeats: seatDocs.length,
+    layout: { rows, seatsPerRow },
   });
 });
 

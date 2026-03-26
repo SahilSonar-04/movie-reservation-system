@@ -8,24 +8,27 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Restore user from token on page load/refresh
+  // Restore user from token on page load/refresh
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token) {
+    const storedUser = localStorage.getItem("user");
+    if (token && storedUser) {
       try {
         const decoded = jwtDecode(token);
-        
-        // ✅ Check if token is expired
+
+        // Check if token is expired
         const currentTime = Date.now() / 1000;
         if (decoded.exp && decoded.exp < currentTime) {
           localStorage.removeItem("token");
+          localStorage.removeItem("user");
           setUser(null);
         } else {
-          setUser({ _id: decoded.id, role: decoded.role });
+          setUser(JSON.parse(storedUser));
         }
       } catch (err) {
         console.error("Invalid token:", err);
         localStorage.removeItem("token");
+        localStorage.removeItem("user");
         setUser(null);
       }
     }
@@ -36,10 +39,9 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await api.post("/auth/login", { email, password });
       localStorage.setItem("token", res.data.token);
-
-      const decoded = jwtDecode(res.data.token);
-      setUser({ _id: decoded.id, role: decoded.role });
-      
+      const userData = res.data.user;
+      localStorage.setItem("user", JSON.stringify(userData));
+      setUser(userData);
       return { success: true };
     } catch (err) {
       console.error("Login failed:", err);
@@ -55,10 +57,9 @@ export const AuthProvider = ({ children }) => {
         password,
       });
       localStorage.setItem("token", res.data.token);
-
-      const decoded = jwtDecode(res.data.token);
-      setUser({ _id: decoded.id, role: decoded.role });
-      
+      const userData = res.data.user;
+      localStorage.setItem("user", JSON.stringify(userData));
+      setUser(userData);
       return { success: true };
     } catch (err) {
       console.error("Registration failed:", err);
@@ -68,6 +69,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setUser(null);
   };
 

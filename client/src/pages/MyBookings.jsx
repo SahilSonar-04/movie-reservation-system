@@ -167,6 +167,7 @@ function MyBookings() {
                 <h3 style={{ margin: 0, fontSize: "20px", fontWeight: "600", color: "#111827" }}>
                   {b.show.movie.title}
                 </h3>
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                 <span
                   style={{
                     padding: "6px 12px",
@@ -181,6 +182,29 @@ function MyBookings() {
                 >
                   {b.status}
                 </span>
+                {b.paymentStatus && (
+                  <span
+                    style={{
+                      padding: "6px 12px",
+                      background:
+                        b.paymentStatus === "PAID" ? "#eff6ff" :
+                        b.paymentStatus === "REFUNDED" ? "#fefce8" :
+                        b.paymentStatus === "FAILED" ? "#fef2f2" : "#f3f4f6",
+                      color:
+                        b.paymentStatus === "PAID" ? "#1d4ed8" :
+                        b.paymentStatus === "REFUNDED" ? "#92400e" :
+                        b.paymentStatus === "FAILED" ? "#991b1b" : "#6b7280",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                    }}
+                  >
+                    {b.paymentStatus}
+                  </span>
+                )}
+              </div>
               </div>
 
               {/* Booking Details */}

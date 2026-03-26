@@ -35,8 +35,39 @@ function Seats({ show, onBack }) {
 
   useEffect(() => {
     fetchSeats();
-    const interval = setInterval(fetchSeats, 2000);
-    return () => clearInterval(interval);
+
+    const POLL_INTERVAL = 5000;
+    let interval = null;
+
+    const startPolling = () => {
+      if (!interval) {
+        interval = setInterval(fetchSeats, POLL_INTERVAL);
+      }
+    };
+
+    const stopPolling = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        fetchSeats();
+        startPolling();
+      }
+    };
+
+    startPolling();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [show._id]);
 
   useEffect(() => {
@@ -611,7 +642,19 @@ function Seats({ show, onBack }) {
       </div>
 
       {/* Seats Grid */}
-      <div style={{ display: "flex", justifyContent: "center", marginBottom: "48px" }}>
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: "48px", position: "relative" }}>
+        {loading && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "rgba(255,255,255,0.6)",
+              zIndex: 10,
+              borderRadius: "8px",
+              cursor: "not-allowed",
+            }}
+          />
+        )}
         <SeatGrid
           seats={seats}
           selectedSeats={selectedSeats}

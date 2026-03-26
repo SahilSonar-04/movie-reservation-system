@@ -4,6 +4,7 @@ import Theater from "../models/theater.model.js";
 import Seat from "../models/seat.model.js";
 import Booking from "../models/booking.model.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { withTransaction } from "../utils/transaction.utils.js";
 
 // ADMIN: Create a show for a movie
 export const createShow = asyncHandler(async (req, res) => {
@@ -44,10 +45,16 @@ export const createShow = asyncHandler(async (req, res) => {
 // PUBLIC: Get all shows for a movie
 export const getShowsByMovie = asyncHandler(async (req, res) => {
   const { movieId } = req.params;
+  const includePast = req.query.includePast === "true";
 
-  const shows = await Show.find({ movie: movieId })
+  const filter = { movie: movieId };
+  if (!includePast) {
+    filter.startTime = { $gte: new Date() };
+  }
+
+  const shows = await Show.find(filter)
     .populate("movie")
-    .populate("theater") // ✅ Include theater info
+    .populate("theater")
     .sort({ startTime: 1 });
 
   res.json(shows);
@@ -105,12 +112,11 @@ export const deleteShow = asyncHandler(async (req, res) => {
     });
   }
 
-  await Seat.deleteMany({ show: showId });
-  await Booking.deleteMany({
-    show: showId,
-    status: "CANCELLED",
+  await withTransaction(async (session) => {
+    await Seat.deleteMany({ show: showId }, { session });
+    await Booking.deleteMany({ show: showId, status: "CANCELLED" }, { session });
+    await Show.findByIdAndDelete(showId, { session });
   });
-  await Show.findByIdAndDelete(showId);
 
   res.json({
     message: "Show and all related data deleted successfully",
