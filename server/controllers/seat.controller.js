@@ -14,12 +14,9 @@ export const generateSeatsForShow = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: "Show not found" });
   }
 
-  // Prevent duplicate generation
   const existingSeat = await Seat.findOne({ show: showId });
   if (existingSeat) {
-    return res
-      .status(400)
-      .json({ message: "Seats already generated for this show" });
+    return res.status(400).json({ message: "Seats already generated for this show" });
   }
 
   const seatNumbers = generateSeats({ rows, seatsPerRow });
@@ -41,11 +38,9 @@ export const generateSeatsForShow = asyncHandler(async (req, res) => {
 // PUBLIC: Get seats for a show
 export const getSeatsForShow = asyncHandler(async (req, res) => {
   const { showId } = req.params;
-  const now = new Date();
 
-  const seats = await Seat.find({ show: showId }).sort({
-    seatNumber: 1,
-  });
+  // `now` was previously defined here but never used — removed.
+  const seats = await Seat.find({ show: showId }).sort({ seatNumber: 1 });
 
   res.json(seats);
 });

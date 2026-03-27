@@ -7,38 +7,32 @@ import { LOCK_TIME_MS } from "../config/lock.config.js";
 import { withTransaction } from "../utils/transaction.utils.js";
 import stripe from "../config/stripe.config.js";
 import { sendBookingConfirmationEmail } from "../utils/emailService.js";
+import { emitSeatUpdate } from "../utils/socket.js";
+import logger from "../utils/logger.js";
 
 export const confirmBooking = asyncHandler(async (req, res) => {
   const { seatIds, showId, totalAmount } = req.body;
   const userId = req.user._id;
   const now = new Date();
 
-  if (!seatIds || seatIds.length === 0) {
-    throw new ApiError(400, "No seats provided");
-  }
+  if (!seatIds || seatIds.length === 0) throw new ApiError(400, "No seats provided");
 
   const show = await Show.findById(showId);
   if (!show) throw new ApiError(404, "Show not found");
 
-  if (new Date(show.startTime) <= now) {
-    throw new ApiError(400, "Cannot book seats for past shows");
-  }
+  if (new Date(show.startTime) <= now) throw new ApiError(400, "Cannot book seats for past shows");
 
   const booking = await withTransaction(async (session) => {
     const seats = await Seat.find({ _id: { $in: seatIds } }).session(session);
 
-    if (seats.length !== seatIds.length) {
-      throw new ApiError(400, "Some seats not found");
-    }
+    if (seats.length !== seatIds.length) throw new ApiError(400, "Some seats not found");
 
     for (const seat of seats) {
       if (seat.show.toString() !== showId.toString()) {
         throw new ApiError(400, `Seat ${seat.seatNumber} belongs to a different show`);
       }
-
       if (
-        seat.status !== "LOCKED" ||
-        !seat.lockedAt ||
+        seat.status !== "LOCKED" || !seat.lockedAt ||
         seat.lockedBy.toString() !== userId.toString() ||
         now - seat.lockedAt > LOCK_TIME_MS
       ) {
@@ -58,10 +52,7 @@ export const confirmBooking = asyncHandler(async (req, res) => {
         lockedBy: userId,
         lockedAt: { $gte: new Date(Date.now() - LOCK_TIME_MS) },
       },
-      {
-        $set: { status: "BOOKED" },
-        $unset: { lockedAt: "", lockedBy: "" },
-      },
+      { $set: { status: "BOOKED" }, $unset: { lockedAt: "", lockedBy: "" } },
       { session }
     );
 
@@ -77,9 +68,15 @@ export const confirmBooking = asyncHandler(async (req, res) => {
     return newBooking[0];
   });
 
-  await booking.populate([{ path: "show", populate: { path: "movie theater" } }, { path: "seats" }]);
+  await booking.populate([
+    { path: "show", populate: { path: "movie theater" } },
+    { path: "seats" },
+  ]);
 
-  // Send confirmation email (real implementation)
+  // Notify all users on the seat map that these seats are now BOOKED
+  const updatedSeats = await Seat.find({ show: showId });
+  emitSeatUpdate(showId, updatedSeats);
+
   await sendBookingConfirmationEmail({
     userEmail: req.user.email,
     userName: req.user.name,
@@ -98,18 +95,9 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     .populate({ path: "show", populate: { path: "movie" } });
 
   if (!booking) throw new ApiError(404, "Booking not found");
-
-  if (booking.user.toString() !== userId.toString()) {
-    throw new ApiError(403, "Unauthorized cancellation");
-  }
-
-  if (booking.status === "CANCELLED") {
-    throw new ApiError(400, "Booking already cancelled");
-  }
-
-  if (new Date(booking.show.startTime) <= new Date()) {
-    throw new ApiError(400, "Cannot cancel booking for past shows");
-  }
+  if (booking.user.toString() !== userId.toString()) throw new ApiError(403, "Unauthorized cancellation");
+  if (booking.status === "CANCELLED") throw new ApiError(400, "Booking already cancelled");
+  if (new Date(booking.show.startTime) <= new Date()) throw new ApiError(400, "Cannot cancel booking for past shows");
 
   if (booking.paymentIntentId && booking.paymentStatus === "PAID") {
     try {
@@ -118,25 +106,29 @@ export const cancelBooking = asyncHandler(async (req, res) => {
         reason: "requested_by_customer",
       });
       booking.paymentStatus = "REFUNDED";
-      console.log(`Refund processed: ${refund.id}`);
+      logger.info(`Refund processed: ${refund.id} for booking ${bookingId}`);
     } catch (error) {
-      console.error("Refund failed:", error);
+      logger.error(`Refund failed for booking ${bookingId}: ${error.message}`);
       throw new ApiError(500, "Failed to process refund. Please contact support.");
     }
   }
 
+  const showId = booking.show._id.toString();
+
   await withTransaction(async (session) => {
     const seatIds = booking.seats.map((seat) => seat._id);
-
     await Seat.updateMany(
       { _id: { $in: seatIds } },
       { $set: { status: "FREE" }, $unset: { lockedAt: "", lockedBy: "" } },
       { session }
     );
-
     booking.status = "CANCELLED";
     await booking.save({ session });
   });
+
+  // Freed seats should reflect immediately on anyone's seat map
+  const updatedSeats = await Seat.find({ show: showId });
+  emitSeatUpdate(showId, updatedSeats);
 
   res.json({
     message: "Booking cancelled successfully",

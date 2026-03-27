@@ -3,8 +3,10 @@ import Show from "../models/show.model.js";
 import Seat from "../models/seat.model.js";
 import Booking from "../models/booking.model.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { withTransaction } from "../utils/transaction.utils.js";
+import logger from "../utils/logger.js";
 
-// ✅ ADMIN: Create theater
+// ADMIN: Create theater
 export const createTheater = asyncHandler(async (req, res) => {
   const { name, location, address, amenities } = req.body;
 
@@ -22,30 +24,30 @@ export const createTheater = asyncHandler(async (req, res) => {
   res.status(201).json(theater);
 });
 
-// ✅ PUBLIC: Get all theaters
+// PUBLIC: Get all theaters
 export const getTheaters = asyncHandler(async (req, res) => {
   const theaters = await Theater.find().sort({ location: 1, name: 1 });
   res.json(theaters);
 });
 
-// ✅ PUBLIC: Get theaters by location/city
+// PUBLIC: Get theaters by location/city
 export const getTheatersByLocation = asyncHandler(async (req, res) => {
   const { location } = req.params;
 
   const theaters = await Theater.find({
-    location: { $regex: new RegExp(location, "i") },
+    location: { $regex: new RegExp(location.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") },
   }).sort({ name: 1 });
 
   res.json(theaters);
 });
 
-// ✅ PUBLIC: Get unique locations/cities
+// PUBLIC: Get unique locations/cities
 export const getLocations = asyncHandler(async (req, res) => {
   const locations = await Theater.distinct("location");
   res.json(locations.sort());
 });
 
-// ✅ ADMIN: Delete theater
+// ADMIN: Delete theater
 export const deleteTheater = asyncHandler(async (req, res) => {
   const { theaterId } = req.params;
 
@@ -54,11 +56,9 @@ export const deleteTheater = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: "Theater not found" });
   }
 
-  // Check if there are shows for this theater
   const shows = await Show.find({ theater: theaterId });
   const showIds = shows.map((show) => show._id);
 
-  // Check for confirmed bookings
   const confirmedBookings = await Booking.countDocuments({
     show: { $in: showIds },
     status: "CONFIRMED",
@@ -70,14 +70,16 @@ export const deleteTheater = asyncHandler(async (req, res) => {
     });
   }
 
-  // Delete cascade: seats → cancelled bookings → shows → theater
-  await Seat.deleteMany({ show: { $in: showIds } });
-  await Booking.deleteMany({
-    show: { $in: showIds },
-    status: "CANCELLED",
+  // Wrap cascade in a transaction — previously ran as separate operations,
+  // meaning a failure midway left orphaned seats/shows in the database.
+  await withTransaction(async (session) => {
+    await Seat.deleteMany({ show: { $in: showIds } }, { session });
+    await Booking.deleteMany({ show: { $in: showIds }, status: "CANCELLED" }, { session });
+    await Show.deleteMany({ theater: theaterId }, { session });
+    await Theater.findByIdAndDelete(theaterId, { session });
   });
-  await Show.deleteMany({ theater: theaterId });
-  await Theater.findByIdAndDelete(theaterId);
+
+  logger.info(`Theater deleted: ${theater.name} (ID: ${theaterId}), ${shows.length} shows removed`);
 
   res.json({
     message: "Theater and all related data deleted successfully",

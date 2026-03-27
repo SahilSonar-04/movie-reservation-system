@@ -308,7 +308,7 @@ function AdminDashboard() {
               style={{ animation: syncing ? "spin 1s linear infinite" : "none" }}>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
             </svg>
-            {syncing ? "Syncing..." : "Sync from TMDB"}
+            {syncing ? "Syncing..." : "Fetch latest movies"}
           </button>
 
           <button
@@ -423,7 +423,7 @@ function AdminDashboard() {
       <div style={{ marginBottom: "40px" }}>
         <h2 style={{ margin: "0 0 20px 0", fontSize: "24px", fontWeight: "600", color: "#111827" }}>Existing Movies ({movies.length})</h2>
         {movies.length === 0 ? (
-          <div style={{ background: "#f9fafb", padding: "40px", borderRadius: "12px", textAlign: "center", color: "#6b7280" }}>No movies added yet. Use "Sync from TMDB" to auto-import now-playing movies.</div>
+          <div style={{ background: "#f9fafb", padding: "40px", borderRadius: "12px", textAlign: "center", color: "#6b7280" }}>No movies added yet. Use "Fetch latest movies" to auto-import now-playing movies.</div>
         ) : (
           <div style={{ display: "grid", gap: "12px" }}>
             {movies.map((movie) => (

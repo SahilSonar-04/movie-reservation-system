@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import QRCode from "qrcode";
+import logger from "./logger.js";
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -9,7 +10,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const generateTicketHTML = async ({ userName, booking }) => {
+const generateTicketHTML = ({ userName, booking, hasQR }) => {
   const show = booking.show;
   const showDate = new Date(show.startTime);
   const bookingDate = new Date(booking.createdAt);
@@ -25,20 +26,10 @@ const generateTicketHTML = async ({ userName, booking }) => {
     month: "short", day: "numeric", year: "numeric",
   });
 
-  // Generate QR code as base64 data URL (encodes the booking ID)
-  let qrDataUrl = "";
-  try {
-    qrDataUrl = await QRCode.toDataURL(booking._id.toString(), {
-      width: 120,
-      margin: 1,
-      color: { dark: "#111827", light: "#ffffff" },
-    });
-  } catch (err) {
-    console.error("[EMAIL] QR generation failed:", err.message);
-  }
-
-  const qrImageTag = qrDataUrl
-    ? `<img src="${qrDataUrl}" width="120" height="120" alt="Booking QR Code" style="border:4px solid #fff;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,0.1);display:block;" />`
+  // CID reference — the actual image is sent as an inline attachment.
+  // data: URIs are blocked by Gmail and most clients for security reasons.
+  const qrImageTag = hasQR
+    ? `<img src="cid:qrcode" width="120" height="120" alt="Booking QR Code" style="border:4px solid #fff;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,0.1);display:block;" />`
     : "";
 
   return `
@@ -109,12 +100,12 @@ const generateTicketHTML = async ({ userName, booking }) => {
               <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:16px;">
                 <table width="100%" cellpadding="0" cellspacing="0">
                   <tr>
-                    ${qrImageTag ? `<td width="140" style="vertical-align:middle;padding-right:20px;">${qrImageTag}</td>` : ""}
+                    ${hasQR ? `<td width="140" style="vertical-align:middle;padding-right:20px;">${qrImageTag}</td>` : ""}
                     <td style="vertical-align:middle;">
                       <p style="margin:0 0 6px;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;">Booking ID</p>
                       <p style="margin:0 0 8px;font-size:12px;font-family:monospace;font-weight:600;color:#111827;word-break:break-all;">${booking._id}</p>
                       <p style="margin:0;font-size:11px;color:#9ca3af;">Booked on ${formattedBookingDate}</p>
-                      ${qrImageTag ? `<p style="margin:8px 0 0;font-size:11px;color:#6b7280;">Scan QR at the theater entrance</p>` : ""}
+                      ${hasQR ? `<p style="margin:8px 0 0;font-size:11px;color:#6b7280;">Scan QR at the theater entrance</p>` : ""}
                     </td>
                   </tr>
                 </table>
@@ -140,23 +131,47 @@ const generateTicketHTML = async ({ userName, booking }) => {
 
 export const sendBookingConfirmationEmail = async ({ userEmail, userName, booking }) => {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn("[EMAIL] Skipped — EMAIL_USER or EMAIL_PASS not set in .env");
+    logger.warn("[EMAIL] Skipped — EMAIL_USER or EMAIL_PASS not set in .env");
     return;
   }
 
-  const html = await generateTicketHTML({ userName, booking });
+  // Generate QR as a raw PNG buffer — sent as inline attachment, NOT a data URI.
+  // data: URIs are stripped by Gmail and most email clients for security.
+  let qrBuffer = null;
+  try {
+    qrBuffer = await QRCode.toBuffer(booking._id.toString(), {
+      width: 120,
+      margin: 1,
+      color: { dark: "#111827", light: "#ffffff" },
+    });
+  } catch (err) {
+    logger.error(`[EMAIL] QR generation failed: ${err.message}`);
+  }
+
+  const html = generateTicketHTML({ userName, booking, hasQR: !!qrBuffer });
 
   const mailOptions = {
     from: `"CineBook 🎬" <${process.env.EMAIL_USER}>`,
     to: userEmail,
     subject: `Your tickets for ${booking.show.movie.title} are confirmed! 🎉`,
     html,
+    // Inline attachment: nodemailer matches cid:qrcode in the HTML to this attachment
+    attachments: qrBuffer
+      ? [
+          {
+            filename: "qrcode.png",
+            content: qrBuffer,
+            cid: "qrcode", // must match src="cid:qrcode" in the HTML
+            contentType: "image/png",
+          },
+        ]
+      : [],
   };
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log(`[EMAIL] Confirmation sent to ${userEmail} — MessageId: ${info.messageId}`);
+    logger.info(`[EMAIL] Confirmation sent to ${userEmail} — MessageId: ${info.messageId}`);
   } catch (err) {
-    console.error(`[EMAIL] Failed to send to ${userEmail}:`, err.message);
+    logger.error(`[EMAIL] Failed to send to ${userEmail}: ${err.message}`);
   }
 };

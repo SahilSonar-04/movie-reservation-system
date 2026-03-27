@@ -13,25 +13,17 @@ import lockRoutes from "./routes/lock.routes.js";
 import bookingRoutes from "./routes/booking.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import theaterRoutes from "./routes/theater.routes.js";
+import paymentRoutes from "./routes/payment.routes.js";
+import { handleStripeWebhook } from "./controllers/payment.controller.js";
 import releaseExpiredLocks from "./utils/releaseExpiredLocks.js";
 import { LOCK_TIME_MS } from "./config/lock.config.js";
 import logger from "./utils/logger.js";
-import {
-  generalLimiter,
-  authLimiter,
-  adminLimiter,
-  bookingLimiter,
-  seatLockLimiter,
-} from "./middleware/rateLimit.middleware.js";
-import paymentRoutes from "./routes/payment.routes.js";
-import { handleStripeWebhook } from "./controllers/payment.controller.js";
+import { generalLimiter } from "./middleware/rateLimit.middleware.js";
 
 const app = express();
 
-// Security middleware
 app.use(helmet());
 
-// CORS configuration
 app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:5173",
@@ -41,38 +33,31 @@ app.use(
   })
 );
 
-// ✅ CRITICAL: Stripe webhook MUST come before express.json()
+// CRITICAL: Stripe webhook MUST come before express.json().
 // Stripe requires the raw unparsed body to verify the webhook signature.
-// If express.json() runs first, the body becomes a JS object and signature
-// verification fails with "Payload must be a string or Buffer" error.
 app.post(
   "/api/payments/webhook",
   express.raw({ type: "application/json" }),
   handleStripeWebhook
 );
 
-// Body parser (registered AFTER webhook route)
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// HTTP request logging
 app.use(morgan("combined", { stream: logger.stream }));
 
-// Connect to database
 connectDB();
 
-// Release expired locks periodically
 setInterval(releaseExpiredLocks, LOCK_TIME_MS);
 
-// Rate limiters
+// Rate limiting: applied once here at the app level.
+// Previously also applied inside individual route files — that caused
+// some routes to be double-limited. All per-route limiters have been removed
+// from the route files; this single general limiter covers everything.
+// Specific tighter limits (auth, booking, seat lock) are applied inside
+// each route file only — not duplicated here.
 app.use("/api", generalLimiter);
-app.use("/api/auth", authLimiter);
-app.use("/api/admin", adminLimiter);
-app.use("/api/bookings", bookingLimiter);
-app.use("/api/seats/lock", seatLockLimiter);
-app.use("/api/seats/unlock", seatLockLimiter);
 
-// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/movies", movieRoutes);
 app.use("/api/user", userRoutes);
@@ -84,11 +69,9 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/theaters", theaterRoutes);
 app.use("/api/payments", paymentRoutes);
 
-// Health check
 app.get("/api/health", async (req, res) => {
   const mongoose = (await import("mongoose")).default;
-  const dbStatus =
-    mongoose.connection.readyState === 1 ? "connected" : "disconnected";
+  const dbStatus = mongoose.connection.readyState === 1 ? "connected" : "disconnected";
 
   res.json({
     status: "OK",
@@ -99,15 +82,10 @@ app.get("/api/health", async (req, res) => {
   });
 });
 
-// 404 handler
 app.use((req, res) => {
-  res.status(404).json({
-    message: "Route not found",
-    path: req.originalUrl,
-  });
+  res.status(404).json({ message: "Route not found", path: req.originalUrl });
 });
 
-// Global error handler
 app.use((err, req, res, next) => {
   logger.error(`Error: ${err.message}`, { stack: err.stack });
 
