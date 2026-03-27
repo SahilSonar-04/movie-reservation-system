@@ -24,7 +24,7 @@ import {
   seatLockLimiter,
 } from "./middleware/rateLimit.middleware.js";
 import paymentRoutes from "./routes/payment.routes.js";
-
+import { handleStripeWebhook } from "./controllers/payment.controller.js";
 
 const app = express();
 
@@ -41,7 +41,17 @@ app.use(
   })
 );
 
-// Body parser
+// ✅ CRITICAL: Stripe webhook MUST come before express.json()
+// Stripe requires the raw unparsed body to verify the webhook signature.
+// If express.json() runs first, the body becomes a JS object and signature
+// verification fails with "Payload must be a string or Buffer" error.
+app.post(
+  "/api/payments/webhook",
+  express.raw({ type: "application/json" }),
+  handleStripeWebhook
+);
+
+// Body parser (registered AFTER webhook route)
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
@@ -54,19 +64,11 @@ connectDB();
 // Release expired locks periodically
 setInterval(releaseExpiredLocks, LOCK_TIME_MS);
 
-// General API
+// Rate limiters
 app.use("/api", generalLimiter);
-
-// Auth
 app.use("/api/auth", authLimiter);
-
-// Admin
 app.use("/api/admin", adminLimiter);
-
-// Bookings
 app.use("/api/bookings", bookingLimiter);
-
-// Seats
 app.use("/api/seats/lock", seatLockLimiter);
 app.use("/api/seats/unlock", seatLockLimiter);
 
@@ -109,7 +111,6 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   logger.error(`Error: ${err.message}`, { stack: err.stack });
 
-  // Mongoose validation error
   if (err.name === "ValidationError") {
     return res.status(400).json({
       message: "Validation error",
@@ -117,7 +118,6 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // Mongoose duplicate key error
   if (err.code === 11000) {
     return res.status(400).json({
       message: "Duplicate entry",
@@ -125,7 +125,6 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // JWT errors
   if (err.name === "JsonWebTokenError") {
     return res.status(401).json({ message: "Invalid token" });
   }
@@ -134,7 +133,6 @@ app.use((err, req, res, next) => {
     return res.status(401).json({ message: "Token expired" });
   }
 
-  // Default error
   res.status(err.statusCode || 500).json({
     message: err.message || "Internal server error",
     ...(process.env.NODE_ENV === "development" && { stack: err.stack }),

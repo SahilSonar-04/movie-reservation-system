@@ -3,11 +3,7 @@ import authMiddleware from "../middleware/auth.middleware.js";
 import {
   createPaymentIntent,
   confirmBookingAfterPayment,
-  handleStripeWebhook,
 } from "../controllers/payment.controller.js";
-import {
-  confirmBookingValidation,
-} from "../middleware/validation.middleware.js";
 import { bookingLimiter } from "../middleware/rateLimit.middleware.js";
 
 const router = express.Router();
@@ -28,11 +24,7 @@ router.post(
   confirmBookingAfterPayment
 );
 
-// Stripe webhook (no auth middleware, verified by Stripe signature)
-router.post(
-  "/webhook",
-  express.raw({ type: "application/json" }),
-  handleStripeWebhook
-);
+// NOTE: /webhook is registered directly in app.js BEFORE express.json()
+// so that Stripe gets the raw unparsed body for signature verification.
 
 export default router;
