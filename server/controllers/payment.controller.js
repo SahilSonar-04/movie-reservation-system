@@ -7,6 +7,7 @@ import ApiError from "../utils/ApiError.js";
 import { LOCK_TIME_MS } from "../config/lock.config.js";
 import { withTransaction } from "../utils/transaction.utils.js";
 import { sendBookingConfirmationEmail } from "../utils/emailService.js";
+import logger from "../utils/logger.js";
 
 // Create payment intent
 export const createPaymentIntent = asyncHandler(async (req, res) => {
@@ -125,14 +126,18 @@ export const confirmBookingAfterPayment = asyncHandler(async (req, res) => {
 
   await booking.populate([{ path: "show", populate: { path: "movie theater" } }, { path: "seats" }]);
 
-  // Send confirmation email (real implementation)
-  await sendBookingConfirmationEmail({
+  // Respond immediately — do NOT await email. Email sending (QR generation + SMTP)
+  // can take 10–30s and will cause the request to time out on Render's free tier.
+  res.status(201).json({ message: "Booking confirmed successfully", booking });
+
+  // Fire-and-forget: send email after response is already on its way
+  sendBookingConfirmationEmail({
     userEmail: req.user.email,
     userName: req.user.name,
     booking,
+  }).catch((err) => {
+    logger.error(`[EMAIL] Background send failed: ${err.message}`);
   });
-
-  res.status(201).json({ message: "Booking confirmed successfully", booking });
 });
 
 // Webhook to handle Stripe events
