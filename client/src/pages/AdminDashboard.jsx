@@ -42,6 +42,7 @@ function AdminDashboard() {
   const [shows, setShows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [statsRefreshing, setStatsRefreshing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState(null);
   const [selectedMovieForShows, setSelectedMovieForShows] = useState(null);
   const [toast, setToast] = useState(null);
@@ -102,9 +103,8 @@ function AdminDashboard() {
     fetchMovies();
     fetchTheaters();
 
-    // Auto-refresh stats every 30 seconds
     autoRefreshIntervalRef.current = setInterval(() => {
-      fetchStats(true); // silent refresh
+      fetchStats(true);
     }, 30000);
 
     return () => {
@@ -122,6 +122,26 @@ function AdminDashboard() {
     setStatsRefreshing(false);
     showToast("Dashboard refreshed");
   };
+
+  // ─── TMDB Sync ────────────────────────────────────────────────────────────
+  const handleTMDBSync = async () => {
+    setSyncing(true);
+    try {
+      const res = await api.post("/admin/sync-movies");
+      const { moviesCreated, moviesSkipped, showsCreated } = res.data;
+      showToast(
+        `Sync complete — ${moviesCreated} new movies, ${showsCreated} shows created, ${moviesSkipped} already existed`
+      );
+      fetchMovies();
+      fetchTheaters();
+      fetchStats();
+    } catch (err) {
+      showToast(err.response?.data?.message || "TMDB sync failed", "error");
+    } finally {
+      setSyncing(false);
+    }
+  };
+  // ─────────────────────────────────────────────────────────────────────────
 
   const addTheater = async (e) => {
     e.preventDefault();
@@ -264,34 +284,52 @@ function AdminDashboard() {
               Last refreshed: {lastRefreshed.toLocaleTimeString()}
             </span>
           )}
+
+          {/* TMDB Sync Button */}
+          <button
+            onClick={handleTMDBSync}
+            disabled={syncing}
+            style={{
+              display: "flex", alignItems: "center", gap: "6px",
+              padding: "9px 16px",
+              background: syncing ? "#f3f4f6" : "#fef2f2",
+              border: "1px solid #fecaca",
+              borderRadius: "8px",
+              cursor: syncing ? "not-allowed" : "pointer",
+              fontSize: "13px", fontWeight: "600",
+              color: syncing ? "#9ca3af" : "#dc2626",
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={(e) => { if (!syncing) { e.currentTarget.style.background = "#dc2626"; e.currentTarget.style.color = "#fff"; } }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = syncing ? "#f3f4f6" : "#fef2f2"; e.currentTarget.style.color = syncing ? "#9ca3af" : "#dc2626"; }}
+            title="Fetch now-playing movies from TMDB and auto-generate shows for next 7 days"
+          >
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              style={{ animation: syncing ? "spin 1s linear infinite" : "none" }}>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+            </svg>
+            {syncing ? "Syncing..." : "Sync from TMDB"}
+          </button>
+
           <button
             onClick={handleManualRefresh}
             disabled={statsRefreshing}
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
+              display: "flex", alignItems: "center", gap: "6px",
               padding: "9px 16px",
               background: statsRefreshing ? "#f3f4f6" : "#fff",
               border: "1px solid #e5e7eb",
               borderRadius: "8px",
               cursor: statsRefreshing ? "not-allowed" : "pointer",
-              fontSize: "13px",
-              fontWeight: "500",
+              fontSize: "13px", fontWeight: "500",
               color: statsRefreshing ? "#9ca3af" : "#374151",
               transition: "all 0.2s",
             }}
-            onMouseEnter={(e) => { if (!statsRefreshing) { e.currentTarget.style.borderColor = "#dc2626"; e.currentTarget.style.color = "#dc2626"; }}}
+            onMouseEnter={(e) => { if (!statsRefreshing) { e.currentTarget.style.borderColor = "#dc2626"; e.currentTarget.style.color = "#dc2626"; } }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.color = statsRefreshing ? "#9ca3af" : "#374151"; }}
           >
-            <svg
-              width="14"
-              height="14"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              style={{ animation: statsRefreshing ? "spin 1s linear infinite" : "none" }}
-            >
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              style={{ animation: statsRefreshing ? "spin 1s linear infinite" : "none" }}>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
             {statsRefreshing ? "Refreshing..." : "Refresh"}
@@ -318,9 +356,7 @@ function AdminDashboard() {
               </div>
             ))}
           </div>
-          <p style={{ margin: "12px 0 0", fontSize: "12px", color: "#9ca3af" }}>
-            Auto-refreshes every 30 seconds
-          </p>
+          <p style={{ margin: "12px 0 0", fontSize: "12px", color: "#9ca3af" }}>Auto-refreshes every 30 seconds</p>
         </div>
       )}
 
@@ -387,18 +423,23 @@ function AdminDashboard() {
       <div style={{ marginBottom: "40px" }}>
         <h2 style={{ margin: "0 0 20px 0", fontSize: "24px", fontWeight: "600", color: "#111827" }}>Existing Movies ({movies.length})</h2>
         {movies.length === 0 ? (
-          <div style={{ background: "#f9fafb", padding: "40px", borderRadius: "12px", textAlign: "center", color: "#6b7280" }}>No movies added yet.</div>
+          <div style={{ background: "#f9fafb", padding: "40px", borderRadius: "12px", textAlign: "center", color: "#6b7280" }}>No movies added yet. Use "Sync from TMDB" to auto-import now-playing movies.</div>
         ) : (
           <div style={{ display: "grid", gap: "12px" }}>
             {movies.map((movie) => (
               <div key={movie._id} style={{ background: "#fff", border: "1px solid #e5e7eb", padding: "20px", borderRadius: "12px", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div style={{ flex: 1 }}>
-                  <h3 style={{ margin: "0 0 8px 0", fontSize: "18px", fontWeight: "600", color: "#111827" }}>{movie.title}</h3>
-                  {movie.description && <p style={{ margin: "4px 0 12px 0", fontSize: "14px", color: "#6b7280", lineHeight: "1.5" }}>{movie.description}</p>}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", fontSize: "13px", color: "#6b7280" }}>
-                    {movie.duration && <span>{movie.duration} mins</span>}
-                    {movie.language && <span>• {movie.language}</span>}
-                    {movie.genre && movie.genre.length > 0 && <span>• {movie.genre.join(", ")}</span>}
+                <div style={{ flex: 1, display: "flex", gap: "16px", alignItems: "flex-start" }}>
+                  {movie.posterUrl && (
+                    <img src={movie.posterUrl} alt={movie.title} style={{ width: "48px", height: "72px", objectFit: "cover", borderRadius: "4px", flexShrink: 0 }} />
+                  )}
+                  <div>
+                    <h3 style={{ margin: "0 0 8px 0", fontSize: "18px", fontWeight: "600", color: "#111827" }}>{movie.title}</h3>
+                    {movie.description && <p style={{ margin: "4px 0 12px 0", fontSize: "14px", color: "#6b7280", lineHeight: "1.5" }}>{movie.description.slice(0, 120)}{movie.description.length > 120 ? "..." : ""}</p>}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", fontSize: "13px", color: "#6b7280" }}>
+                      {movie.duration && <span>{movie.duration} mins</span>}
+                      {movie.language && <span>• {movie.language}</span>}
+                      {movie.genre && movie.genre.length > 0 && <span>• {movie.genre.join(", ")}</span>}
+                    </div>
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: "8px", marginLeft: "16px" }}>

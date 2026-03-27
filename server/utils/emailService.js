@@ -1,42 +1,45 @@
 import nodemailer from "nodemailer";
+import QRCode from "qrcode";
 
-// Create reusable transporter using Gmail SMTP
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: process.env.EMAIL_USER, // your Gmail address
-    pass: process.env.EMAIL_PASS, // your Gmail App Password (NOT your real password)
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
 });
 
-/**
- * Generates the HTML body for the booking confirmation email.
- * Includes all ticket details in a clean, styled layout.
- */
-const generateTicketHTML = ({ userName, booking }) => {
+const generateTicketHTML = async ({ userName, booking }) => {
   const show = booking.show;
   const showDate = new Date(show.startTime);
   const bookingDate = new Date(booking.createdAt);
-
   const seatNumbers = booking.seats.map((s) => s.seatNumber).join(", ");
 
   const formattedShowDate = showDate.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
+    weekday: "long", month: "long", day: "numeric", year: "numeric",
   });
-
   const formattedShowTime = showDate.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+  });
+  const formattedBookingDate = bookingDate.toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric",
   });
 
-  const formattedBookingDate = bookingDate.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  // Generate QR code as base64 data URL (encodes the booking ID)
+  let qrDataUrl = "";
+  try {
+    qrDataUrl = await QRCode.toDataURL(booking._id.toString(), {
+      width: 120,
+      margin: 1,
+      color: { dark: "#111827", light: "#ffffff" },
+    });
+  } catch (err) {
+    console.error("[EMAIL] QR generation failed:", err.message);
+  }
+
+  const qrImageTag = qrDataUrl
+    ? `<img src="${qrDataUrl}" width="120" height="120" alt="Booking QR Code" style="border:4px solid #fff;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,0.1);display:block;" />`
+    : "";
 
   return `
 <!DOCTYPE html>
@@ -47,7 +50,6 @@ const generateTicketHTML = ({ userName, booking }) => {
   <title>Booking Confirmation – CineBook</title>
 </head>
 <body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:40px 0;">
     <tr>
       <td align="center">
@@ -103,11 +105,19 @@ const generateTicketHTML = ({ userName, booking }) => {
                 <p style="margin:0;font-size:13px;color:#374151;">${booking.seats.length} ${booking.seats.length === 1 ? "seat" : "seats"} &nbsp;•&nbsp; <strong style="color:#dc2626;">₹${booking.totalAmount}</strong></p>
               </div>
 
-              <!-- Booking ID box -->
+              <!-- QR + Booking ID box -->
               <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:16px;">
-                <p style="margin:0 0 6px;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;">Booking ID</p>
-                <p style="margin:0 0 6px;font-size:12px;font-family:monospace;font-weight:600;color:#111827;word-break:break-all;">${booking._id}</p>
-                <p style="margin:0;font-size:11px;color:#9ca3af;">Booked on ${formattedBookingDate}</p>
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    ${qrImageTag ? `<td width="140" style="vertical-align:middle;padding-right:20px;">${qrImageTag}</td>` : ""}
+                    <td style="vertical-align:middle;">
+                      <p style="margin:0 0 6px;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;">Booking ID</p>
+                      <p style="margin:0 0 8px;font-size:12px;font-family:monospace;font-weight:600;color:#111827;word-break:break-all;">${booking._id}</p>
+                      <p style="margin:0;font-size:11px;color:#9ca3af;">Booked on ${formattedBookingDate}</p>
+                      ${qrImageTag ? `<p style="margin:8px 0 0;font-size:11px;color:#6b7280;">Scan QR at the theater entrance</p>` : ""}
+                    </td>
+                  </tr>
+                </table>
               </div>
             </td>
           </tr>
@@ -124,28 +134,17 @@ const generateTicketHTML = ({ userName, booking }) => {
       </td>
     </tr>
   </table>
-
 </body>
-</html>
-  `.trim();
+</html>`.trim();
 };
 
-/**
- * Sends a booking confirmation email to the user.
- * Called after a successful payment in payment.controller.js
- *
- * @param {string} userEmail   - Recipient email address
- * @param {string} userName    - Recipient display name
- * @param {object} booking     - Populated booking document (show → movie, theater; seats)
- */
 export const sendBookingConfirmationEmail = async ({ userEmail, userName, booking }) => {
-  // Skip silently if env vars are not configured (e.g. in dev without email setup)
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     console.warn("[EMAIL] Skipped — EMAIL_USER or EMAIL_PASS not set in .env");
     return;
   }
 
-  const html = generateTicketHTML({ userName, booking });
+  const html = await generateTicketHTML({ userName, booking });
 
   const mailOptions = {
     from: `"CineBook 🎬" <${process.env.EMAIL_USER}>`,
@@ -158,7 +157,6 @@ export const sendBookingConfirmationEmail = async ({ userEmail, userName, bookin
     const info = await transporter.sendMail(mailOptions);
     console.log(`[EMAIL] Confirmation sent to ${userEmail} — MessageId: ${info.messageId}`);
   } catch (err) {
-    // Log but don't throw — a failed email should NOT fail the booking
     console.error(`[EMAIL] Failed to send to ${userEmail}:`, err.message);
   }
 };
