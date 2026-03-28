@@ -1,0 +1,205 @@
+/* Auth.module.css — shared by Login.jsx, Register.jsx, AuthForm.jsx */
+
+/* ── Page wrapper ────────────────────────────────────────── */
+.page {
+  min-height: calc(100vh - 64px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+/* ── Card ────────────────────────────────────────────────── */
+.card {
+  width: 100%;
+  max-width: 420px;
+  background: #16161f;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 40px 36px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+  animation: fadeUp 300ms ease both;
+}
+
+/* ── Header ──────────────────────────────────────────────── */
+.header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 3px;
+  color: #55556a;
+  margin-bottom: 20px;
+  display: block;
+}
+
+.logoAccent { color: #e63030; }
+
+.title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 36px;
+  letter-spacing: 2px;
+  color: #f0f0f5;
+  margin: 0 0 6px;
+  line-height: 1;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #55556a;
+  font-weight: 300;
+  margin: 0;
+}
+
+/* ── Error box ───────────────────────────────────────────── */
+.errorBox {
+  background: rgba(230,48,48,0.08);
+  border: 1px solid rgba(230,48,48,0.25);
+  color: #f87171;
+  padding: 11px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+/* ── Form ────────────────────────────────────────────────── */
+.form { width: 100%; }
+
+.fieldWrap {
+  margin-bottom: 14px;
+}
+
+.label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #9090a8;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.input {
+  width: 100%;
+  padding: 11px 14px;
+  background: #1c1c28;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  font-size: 14px;
+  color: #f0f0f5;
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  box-sizing: border-box;
+}
+
+.input::placeholder { color: #3a3a50; }
+
+.input:focus {
+  border-color: #e63030;
+  box-shadow: 0 0 0 3px rgba(230,48,48,0.15);
+}
+
+.inputError {
+  border-color: rgba(248,113,113,0.5) !important;
+}
+
+.inputError:focus {
+  box-shadow: 0 0 0 3px rgba(248,113,113,0.1) !important;
+}
+
+/* Field error message */
+.fieldError {
+  font-size: 12px;
+  color: #f87171;
+  margin-top: 5px;
+}
+
+/* ── Password strength ───────────────────────────────────── */
+.strengthWrap {
+  margin-top: 8px;
+}
+
+.strengthBar {
+  height: 3px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+
+.strengthFill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 300ms ease, background 300ms ease;
+}
+
+.strengthLabel {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+/* Password hint */
+.passwordHint {
+  font-size: 11px;
+  color: #3a3a50;
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+/* ── Submit button ───────────────────────────────────────── */
+.submitBtn {
+  width: 100%;
+  padding: 13px;
+  background: #e63030;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  margin-top: 8px;
+  letter-spacing: 0.3px;
+  transition: background 150ms ease, transform 150ms ease;
+}
+
+.submitBtn:hover:not(:disabled) {
+  background: #c91c1c;
+  transform: translateY(-1px);
+}
+
+.submitBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── Footer link ─────────────────────────────────────────── */
+.footerText {
+  text-align: center;
+  margin-top: 24px;
+  font-size: 13px;
+  color: #55556a;
+}
+
+.footerLink {
+  color: #e63030;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.footerLink:hover { color: #ff5555; }
+
+/* ── Divider ─────────────────────────────────────────────── */
+.divider {
+  height: 1px;
+  background: rgba(255,255,255,0.06);
+  margin: 24px 0;
+}

@@ -1,0 +1,142 @@
+/* CheckoutForm.module.css */
+
+.form {
+  width: 100%;
+}
+
+/* ── Payment summary ─────────────────────────────────────── */
+.summary {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 24px;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.summaryLabel {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.summaryValue {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.summaryDivider {
+  height: 1px;
+  background: var(--border);
+  margin-bottom: 12px;
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.totalLabel {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.totalValue {
+  font-family: var(--font-display);
+  font-size: 28px;
+  letter-spacing: 1px;
+  color: var(--red-500);
+  line-height: 1;
+}
+
+/* ── Stripe element wrapper ──────────────────────────────── */
+.stripeWrap {
+  margin-bottom: 24px;
+}
+
+/* ── Error ───────────────────────────────────────────────── */
+.errorBox {
+  background: rgba(230, 48, 48, 0.08);
+  border: 1px solid rgba(230, 48, 48, 0.25);
+  color: #f87171;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── Action buttons ──────────────────────────────────────── */
+.actions {
+  display: flex;
+  gap: 12px;
+}
+
+.cancelBtn {
+  flex: 1;
+  padding: 12px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  transition: border-color var(--duration-fast), color var(--duration-fast);
+}
+
+.cancelBtn:hover:not(:disabled) {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.cancelBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.payBtn {
+  flex: 2;
+  padding: 12px;
+  background: var(--red-500);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font-body);
+  transition: background var(--duration-fast), transform var(--duration-fast);
+}
+
+.payBtn:hover:not(:disabled) {
+  background: var(--red-600);
+  transform: translateY(-1px);
+}
+
+.payBtn:disabled {
+  background: var(--surface-2);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* ── Security note ───────────────────────────────────────── */
+.secureNote {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}

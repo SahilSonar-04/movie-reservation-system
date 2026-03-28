@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
+import styles from "./MyBookings.module.css";
 
 function MyBookings() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState("upcoming"); // "upcoming" | "past"
+  const [activeTab, setActiveTab] = useState("upcoming");
 
   const fetchBookings = async () => {
     try {
@@ -25,51 +26,31 @@ function MyBookings() {
   }, []);
 
   const cancelBooking = async (bookingId) => {
-    const confirmCancel = window.confirm(
-      "Are you sure you want to cancel this booking?"
-    );
-    if (!confirmCancel) return;
-
+    if (!window.confirm("Are you sure you want to cancel this booking?")) return;
     try {
       await api.patch(`/bookings/cancel/${bookingId}`);
       alert("Booking cancelled successfully");
       fetchBookings();
     } catch (err) {
       console.error(err);
-      const message = err.response?.data?.message || "Failed to cancel booking";
-      alert(message);
+      alert(err.response?.data?.message || "Failed to cancel booking");
     }
   };
 
   if (loading) {
     return (
-      <div style={{ textAlign: "center", padding: "80px 20px" }}>
-        <div
-          style={{
-            width: "48px",
-            height: "48px",
-            border: "4px solid #f3f4f6",
-            borderTopColor: "#dc2626",
-            borderRadius: "50%",
-            margin: "0 auto 16px",
-            animation: "spin 1s linear infinite",
-          }}
-        />
-        <p style={{ color: "#6b7280", fontSize: "14px" }}>Loading your bookings...</p>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <div className={styles.loadingWrap}>
+        <div className={styles.spinner} />
+        <p className={styles.loadingText}>Loading your bookings…</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{ maxWidth: "600px", margin: "80px auto", padding: "0 20px" }}>
-        <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b", padding: "16px", borderRadius: "8px", marginBottom: "16px" }}>
-          {error}
-        </div>
-        <button onClick={fetchBookings} style={{ padding: "10px 20px", background: "#dc2626", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "500" }}>
-          Retry
-        </button>
+      <div className={styles.errorWrap}>
+        <div className={styles.errorBox}>{error}</div>
+        <button className={styles.retryBtn} onClick={fetchBookings}>Retry</button>
       </div>
     );
   }
@@ -81,103 +62,63 @@ function MyBookings() {
   const pastBookings = bookings.filter(
     (b) => b.status === "CANCELLED" || new Date(b.show.startTime) <= now
   );
-
   const displayedBookings = activeTab === "upcoming" ? upcomingBookings : pastBookings;
 
   if (bookings.length === 0) {
     return (
-      <div style={{ textAlign: "center", padding: "80px 20px" }}>
-        <div style={{ width: "80px", height: "80px", background: "#f3f4f6", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", fontSize: "36px" }}>
-          🎫
-        </div>
-        <h2 style={{ color: "#111827", marginBottom: "8px" }}>No Bookings Yet</h2>
-        <p style={{ color: "#6b7280", marginBottom: "24px" }}>Book your first movie to see it here!</p>
+      <div className={styles.emptyPage}>
+        <div className={styles.emptyIconWrap}>🎫</div>
+        <h2 className={styles.emptyTitle}>No Bookings Yet</h2>
+        <p className={styles.emptyText}>Book your first movie to see it here!</p>
       </div>
     );
   }
 
+  const paymentClass = (status) => {
+    if (status === "PAID")     return styles.paymentPaid;
+    if (status === "REFUNDED") return styles.paymentRefunded;
+    if (status === "FAILED")   return styles.paymentFailed;
+    return styles.paymentPending;
+  };
+
   return (
-    <div>
+    <div className={styles.page}>
+
       {/* Header */}
-      <div style={{ marginBottom: "28px" }}>
-        <h1 style={{ margin: "0 0 8px 0", fontSize: "32px", fontWeight: "700", color: "#111827" }}>
-          My Bookings
-        </h1>
-        <p style={{ color: "#6b7280", margin: 0, fontSize: "15px" }}>
+      <div className={styles.header}>
+        <h1 className={styles.heading}>My Bookings</h1>
+        <p className={styles.subheading}>
           {bookings.length} {bookings.length === 1 ? "booking" : "bookings"} total
         </p>
       </div>
 
       {/* Tabs */}
-      <div
-        style={{
-          display: "flex",
-          gap: "4px",
-          marginBottom: "28px",
-          background: "#f3f4f6",
-          padding: "4px",
-          borderRadius: "10px",
-          width: "fit-content",
-        }}
-      >
+      <div className={styles.tabs}>
         {[
-          { key: "upcoming", label: "Upcoming", count: upcomingBookings.length },
-          { key: "past", label: "Past & Cancelled", count: pastBookings.length },
+          { key: "upcoming", label: "Upcoming",          count: upcomingBookings.length },
+          { key: "past",     label: "Past & Cancelled",  count: pastBookings.length },
         ].map((tab) => (
           <button
             key={tab.key}
+            className={`${styles.tab} ${activeTab === tab.key ? styles.tabActive : ""}`}
             onClick={() => setActiveTab(tab.key)}
-            style={{
-              padding: "10px 20px",
-              border: "none",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontSize: "14px",
-              fontWeight: "600",
-              transition: "all 0.2s",
-              background: activeTab === tab.key ? "#fff" : "transparent",
-              color: activeTab === tab.key ? "#dc2626" : "#6b7280",
-              boxShadow: activeTab === tab.key ? "0 1px 3px rgba(0,0,0,0.12)" : "none",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
           >
             {tab.label}
-            <span
-              style={{
-                padding: "2px 8px",
-                borderRadius: "12px",
-                fontSize: "12px",
-                fontWeight: "700",
-                background: activeTab === tab.key ? "#fef2f2" : "#e5e7eb",
-                color: activeTab === tab.key ? "#dc2626" : "#6b7280",
-              }}
-            >
-              {tab.count}
-            </span>
+            <span className={styles.tabBadge}>{tab.count}</span>
           </button>
         ))}
       </div>
 
-      {/* Empty state for tab */}
+      {/* Empty tab state */}
       {displayedBookings.length === 0 && (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "60px 20px",
-            background: "#fff",
-            borderRadius: "12px",
-            border: "1px solid #e5e7eb",
-          }}
-        >
-          <div style={{ fontSize: "40px", marginBottom: "16px" }}>
+        <div className={styles.emptyTab}>
+          <div className={styles.emptyTabIcon}>
             {activeTab === "upcoming" ? "🎬" : "📁"}
           </div>
-          <h3 style={{ margin: "0 0 8px 0", color: "#111827", fontSize: "18px" }}>
+          <h3 className={styles.emptyTabTitle}>
             {activeTab === "upcoming" ? "No upcoming bookings" : "No past bookings"}
           </h3>
-          <p style={{ color: "#6b7280", fontSize: "14px" }}>
+          <p className={styles.emptyTabText}>
             {activeTab === "upcoming"
               ? "Book a movie to see your upcoming shows here."
               : "Your completed and cancelled bookings will appear here."}
@@ -185,145 +126,91 @@ function MyBookings() {
         </div>
       )}
 
-      {/* Bookings List */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-        {displayedBookings.map((b) => {
+      {/* Booking list */}
+      <div className={styles.list}>
+        {displayedBookings.map((b, idx) => {
           const isConfirmed = b.status === "CONFIRMED";
-          const showDate = new Date(b.show.startTime);
-          const isPastShow = showDate < now;
+          const showDate    = new Date(b.show.startTime);
+          const isPastShow  = showDate < now;
 
           return (
             <div
               key={b._id}
-              style={{
-                border: "1px solid #e5e7eb",
-                borderRadius: "12px",
-                overflow: "hidden",
-                background: "#fff",
-                boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)",
-                opacity: isPastShow || !isConfirmed ? 0.85 : 1,
-              }}
+              className={`${styles.card} ${isPastShow || !isConfirmed ? styles.cardDimmed : ""}`}
+              style={{ animationDelay: `${idx * 50}ms` }}
             >
-              {/* Booking Header */}
-              <div
-                style={{
-                  background: isConfirmed && !isPastShow ? "#fef2f2" : "#f3f4f6",
-                  padding: "16px 24px",
-                  borderBottom: "1px solid #e5e7eb",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <h3 style={{ margin: 0, fontSize: "20px", fontWeight: "600", color: "#111827" }}>
-                  {b.show.movie.title}
-                </h3>
-                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                  <span
-                    style={{
-                      padding: "6px 12px",
-                      background: isConfirmed ? "#dcfce7" : "#fee2e2",
-                      color: isConfirmed ? "#166534" : "#991b1b",
-                      borderRadius: "6px",
-                      fontSize: "12px",
-                      fontWeight: "600",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                    }}
-                  >
+              {/* Card header */}
+              <div className={`${styles.cardHeader} ${isConfirmed && !isPastShow ? styles.cardHeaderConfirmed : ""}`}>
+                <h3 className={styles.movieTitle}>{b.show.movie.title}</h3>
+                <div className={styles.badges}>
+                  <span className={`${styles.statusBadge} ${isConfirmed ? styles.statusConfirmed : styles.statusCancelled}`}>
                     {b.status}
                   </span>
                   {b.paymentStatus && (
-                    <span
-                      style={{
-                        padding: "6px 12px",
-                        background:
-                          b.paymentStatus === "PAID" ? "#eff6ff" :
-                          b.paymentStatus === "REFUNDED" ? "#fefce8" :
-                          b.paymentStatus === "FAILED" ? "#fef2f2" : "#f3f4f6",
-                        color:
-                          b.paymentStatus === "PAID" ? "#1d4ed8" :
-                          b.paymentStatus === "REFUNDED" ? "#92400e" :
-                          b.paymentStatus === "FAILED" ? "#991b1b" : "#6b7280",
-                        borderRadius: "6px",
-                        fontSize: "12px",
-                        fontWeight: "600",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.5px",
-                      }}
-                    >
+                    <span className={`${styles.paymentBadge} ${paymentClass(b.paymentStatus)}`}>
                       {b.paymentStatus}
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* Booking Details */}
-              <div style={{ padding: "24px" }}>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                    gap: "20px",
-                    marginBottom: "20px",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: "12px", color: "#9ca3af", marginBottom: "4px", fontWeight: "500", textTransform: "uppercase" }}>Theater</div>
-                    <div style={{ fontSize: "15px", color: "#111827", fontWeight: "500" }}>{b.show.theater.name}</div>
-                    <div style={{ fontSize: "14px", color: "#6b7280" }}>{b.show.screen}</div>
+              {/* Card body */}
+              <div className={styles.cardBody}>
+                <div className={styles.detailsGrid}>
+                  <div className={styles.detailItem}>
+                    <div className={styles.detailLabel}>Theater</div>
+                    <div className={styles.detailValue}>{b.show.theater.name}</div>
+                    <div className={styles.detailSub}>{b.show.screen}</div>
                   </div>
-                  <div>
-                    <div style={{ fontSize: "12px", color: "#9ca3af", marginBottom: "4px", fontWeight: "500", textTransform: "uppercase" }}>Show Time</div>
-                    <div style={{ fontSize: "15px", color: "#111827", fontWeight: "500" }}>
+
+                  <div className={styles.detailItem}>
+                    <div className={styles.detailLabel}>Show Time</div>
+                    <div className={styles.detailValue}>
                       {showDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
                     </div>
-                    <div style={{ fontSize: "14px", color: "#6b7280" }}>
+                    <div className={styles.detailSub}>
                       {showDate.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                     </div>
                   </div>
-                  <div>
-                    <div style={{ fontSize: "12px", color: "#9ca3af", marginBottom: "4px", fontWeight: "500", textTransform: "uppercase" }}>Seats</div>
-                    <div style={{ fontSize: "15px", color: "#111827", fontWeight: "500" }}>{b.seats.map((s) => s.seatNumber).join(", ")}</div>
-                    <div style={{ fontSize: "14px", color: "#6b7280" }}>{b.seats.length} {b.seats.length === 1 ? "seat" : "seats"}</div>
+
+                  <div className={styles.detailItem}>
+                    <div className={styles.detailLabel}>Seats</div>
+                    <div className={styles.seatChips}>
+                      {b.seats.map((s) => (
+                        <span key={s._id} className={styles.seatChip}>{s.seatNumber}</span>
+                      ))}
+                    </div>
+                    <div className={styles.detailSub}>
+                      {b.seats.length} {b.seats.length === 1 ? "seat" : "seats"}
+                    </div>
                   </div>
-                  <div>
-                    <div style={{ fontSize: "12px", color: "#9ca3af", marginBottom: "4px", fontWeight: "500", textTransform: "uppercase" }}>Total Amount</div>
-                    <div style={{ fontSize: "20px", color: "#dc2626", fontWeight: "700" }}>₹{b.totalAmount}</div>
+
+                  <div className={styles.detailItem}>
+                    <div className={styles.detailLabel}>Total Amount</div>
+                    <div className={styles.totalAmount}>₹{b.totalAmount}</div>
                   </div>
                 </div>
 
-                <div style={{ fontSize: "13px", color: "#9ca3af", paddingTop: "16px", borderTop: "1px solid #f3f4f6" }}>
-                  Booked on {new Date(b.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                <div className={styles.cardDivider} />
+
+                <p className={styles.bookingMeta}>
+                  Booked on{" "}
+                  {new Date(b.createdAt).toLocaleDateString("en-US", {
+                    month: "short", day: "numeric", year: "numeric",
+                    hour: "2-digit", minute: "2-digit",
+                  })}
+                </p>
+
+                <div className={styles.actionRow}>
+                  {isConfirmed && !isPastShow && (
+                    <button className={styles.cancelBtn} onClick={() => cancelBooking(b._id)}>
+                      Cancel Booking
+                    </button>
+                  )}
+                  {isPastShow && isConfirmed && (
+                    <div className={styles.pastNotice}>This show has already ended</div>
+                  )}
                 </div>
-
-                {isConfirmed && !isPastShow && (
-                  <button
-                    onClick={() => cancelBooking(b._id)}
-                    style={{
-                      marginTop: "20px",
-                      padding: "10px 20px",
-                      background: "transparent",
-                      color: "#dc2626",
-                      border: "1px solid #dc2626",
-                      borderRadius: "8px",
-                      cursor: "pointer",
-                      fontSize: "14px",
-                      fontWeight: "500",
-                      transition: "all 0.2s",
-                    }}
-                    onMouseEnter={(e) => { e.target.style.background = "#dc2626"; e.target.style.color = "white"; }}
-                    onMouseLeave={(e) => { e.target.style.background = "transparent"; e.target.style.color = "#dc2626"; }}
-                  >
-                    Cancel Booking
-                  </button>
-                )}
-
-                {isPastShow && isConfirmed && (
-                  <div style={{ marginTop: "20px", padding: "12px", background: "#f3f4f6", borderRadius: "8px", fontSize: "13px", color: "#6b7280", textAlign: "center" }}>
-                    This show has already ended
-                  </div>
-                )}
               </div>
             </div>
           );

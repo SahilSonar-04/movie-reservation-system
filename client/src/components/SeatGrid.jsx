@@ -1,27 +1,16 @@
 import Seat from "./Seat";
 
 function SeatGrid({ seats, selectedSeats, onSeatClick, userId }) {
-  // Sort seats by row and number
   const sortedSeats = [...seats].sort((a, b) => {
     const rowA = a.seatNumber.charAt(0);
     const rowB = b.seatNumber.charAt(0);
-
-    if (rowA !== rowB) {
-      return rowA.localeCompare(rowB);
-    }
-
-    const numA = parseInt(a.seatNumber.slice(1), 10);
-    const numB = parseInt(b.seatNumber.slice(1), 10);
-
-    return numA - numB;
+    if (rowA !== rowB) return rowA.localeCompare(rowB);
+    return parseInt(a.seatNumber.slice(1), 10) - parseInt(b.seatNumber.slice(1), 10);
   });
 
-  // Group seats by row
   const seatsByRow = sortedSeats.reduce((acc, seat) => {
     const row = seat.seatNumber.charAt(0);
-    if (!acc[row]) {
-      acc[row] = [];
-    }
+    if (!acc[row]) acc[row] = [];
     acc[row].push(seat);
     return acc;
   }, {});
@@ -30,38 +19,31 @@ function SeatGrid({ seats, selectedSeats, onSeatClick, userId }) {
 
   return (
     <div style={{ display: "inline-block" }}>
-      {rows.map((row, rowIndex) => {
-        const rowSeats = seatsByRow[row];
-        const seatsPerRow = rowSeats.length;
-        
-        // Create left and right sections with aisle in middle
-        const leftSection = rowSeats.slice(0, Math.floor(seatsPerRow / 2));
-        const rightSection = rowSeats.slice(Math.floor(seatsPerRow / 2));
+      {rows.map((row) => {
+        const rowSeats   = seatsByRow[row];
+        const half       = Math.floor(rowSeats.length / 2);
+        const leftSection  = rowSeats.slice(0, half);
+        const rightSection = rowSeats.slice(half);
 
         return (
           <div
             key={row}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              marginBottom: "10px",
-              gap: "8px",
-            }}
+            style={{ display: "flex", alignItems: "center", marginBottom: "10px", gap: "8px" }}
           >
-            {/* Row Label */}
-            <div
-              style={{
-                width: "30px",
-                textAlign: "center",
-                fontWeight: "bold",
-                fontSize: "14px",
-                color: "#666",
-              }}
-            >
+            {/* Row label left */}
+            <div style={{
+              width: "24px",
+              textAlign: "center",
+              fontSize: "11px",
+              fontWeight: "700",
+              color: "var(--text-muted)",
+              fontFamily: "var(--font-body)",
+              letterSpacing: "0.5px",
+            }}>
               {row}
             </div>
 
-            {/* Left Section */}
+            {/* Left seats */}
             <div style={{ display: "flex", gap: "8px" }}>
               {leftSection.map((seat) => (
                 <Seat
@@ -75,9 +57,9 @@ function SeatGrid({ seats, selectedSeats, onSeatClick, userId }) {
             </div>
 
             {/* Aisle */}
-            <div style={{ width: "40px" }}></div>
+            <div style={{ width: "36px" }} />
 
-            {/* Right Section */}
+            {/* Right seats */}
             <div style={{ display: "flex", gap: "8px" }}>
               {rightSection.map((seat) => (
                 <Seat
@@ -90,16 +72,16 @@ function SeatGrid({ seats, selectedSeats, onSeatClick, userId }) {
               ))}
             </div>
 
-            {/* Row Label (Right) */}
-            <div
-              style={{
-                width: "30px",
-                textAlign: "center",
-                fontWeight: "bold",
-                fontSize: "14px",
-                color: "#666",
-              }}
-            >
+            {/* Row label right */}
+            <div style={{
+              width: "24px",
+              textAlign: "center",
+              fontSize: "11px",
+              fontWeight: "700",
+              color: "var(--text-muted)",
+              fontFamily: "var(--font-body)",
+              letterSpacing: "0.5px",
+            }}>
               {row}
             </div>
           </div>

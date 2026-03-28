@@ -1,0 +1,215 @@
+/* MovieCard.module.css */
+
+.card {
+    position: relative;
+    width: 100%;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    transition:
+        transform var(--duration-base) var(--ease-out),
+        border-color var(--duration-base) var(--ease-out),
+        box-shadow var(--duration-base) var(--ease-out);
+    animation: fadeUp var(--duration-slow) var(--ease-out) both;
+}
+
+.card:hover {
+    transform: translateY(-6px) scale(1.01);
+    border-color: var(--red-500);
+    box-shadow:
+        0 0 0 1px var(--red-500),
+        0 20px 40px rgba(0, 0, 0, 0.5),
+        0 0 60px var(--red-glow);
+}
+
+/* Poster area */
+.posterWrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2/3;
+    overflow: hidden;
+    background: var(--surface);
+}
+
+.poster {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--duration-slow) var(--ease-out);
+}
+
+.card:hover .poster {
+    transform: scale(1.06);
+}
+
+/* Fallback poster when no image */
+.posterFallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    background: linear-gradient(145deg, var(--surface) 0%, var(--bg-elevated) 100%);
+}
+
+.posterFallbackLetter {
+    font-family: var(--font-display);
+    font-size: 72px;
+    color: var(--red-500);
+    line-height: 1;
+    opacity: 0.6;
+}
+
+/* Genre badge overlaid on poster */
+.genreBadge {
+    position: absolute;
+    top: var(--space-3);
+    left: var(--space-3);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+}
+
+.badge {
+    padding: 3px 8px;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 99px;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+/* Gradient overlay at bottom of poster */
+.posterGradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top,
+            rgba(10, 10, 15, 0.95) 0%,
+            rgba(10, 10, 15, 0.4) 40%,
+            transparent 70%);
+    pointer-events: none;
+}
+
+/* Info section */
+.info {
+    padding: var(--space-4) var(--space-4) var(--space-5);
+}
+
+.title {
+    font-family: var(--font-body);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.3;
+    margin-bottom: var(--space-2);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+
+.metaItem {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.metaDot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    flex-shrink: 0;
+}
+
+/* Bottom bar — absolutely positioned so it never bleeds into layout */
+.bookBar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: var(--space-3) var(--space-4);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(to right, var(--red-700), var(--red-600));
+    transform: translateY(100%);
+    transition: transform var(--duration-base) var(--ease-out);
+    /* z-index so it sits above the info text */
+    z-index: 2;
+}
+
+.card:hover .bookBar {
+    transform: translateY(0);
+}
+
+.bookBarText {
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 0.3px;
+}
+
+.bookBarArrow {
+    color: rgba(255, 255, 255, 0.7);
+    transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.card:hover .bookBarArrow {
+    transform: translateX(4px);
+}
+
+/* Skeleton loader */
+.skeleton {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+}
+
+.skeletonPoster {
+    aspect-ratio: 2/3;
+    background: linear-gradient(90deg,
+            var(--surface) 25%,
+            var(--surface-2) 50%,
+            var(--surface) 75%);
+    background-size: 400px 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skeletonInfo {
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.skeletonLine {
+    height: 12px;
+    border-radius: 6px;
+    background: linear-gradient(90deg,
+            var(--surface) 25%,
+            var(--surface-2) 50%,
+            var(--surface) 75%);
+    background-size: 400px 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+}

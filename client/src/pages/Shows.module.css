@@ -1,0 +1,334 @@
+/* Shows.module.css */
+
+.page {
+  animation: fadeIn 300ms ease both;
+}
+
+/* ── Back button ─────────────────────────────────────────── */
+.backBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  margin-bottom: 28px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #9090a8;
+  cursor: pointer;
+  transition: border-color 150ms ease, color 150ms ease;
+}
+
+.backBtn:hover {
+  border-color: #e63030;
+  color: #e63030;
+}
+
+/* ── Movie header ────────────────────────────────────────── */
+.movieHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 32px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.moviePoster {
+  width: 80px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.movieInfo { flex: 1; }
+
+.movieTitle {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 36px;
+  letter-spacing: 1.5px;
+  color: #f0f0f5;
+  margin: 0 0 8px;
+  line-height: 1;
+}
+
+.movieMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.metaTag {
+  padding: 3px 10px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #9090a8;
+}
+
+.movieDesc {
+  font-size: 14px;
+  color: #9090a8;
+  line-height: 1.6;
+  max-width: 600px;
+  font-weight: 300;
+}
+
+/* ── Location filter ─────────────────────────────────────── */
+.locationWrap {
+  margin-bottom: 24px;
+}
+
+.select {
+  padding: 9px 32px 9px 12px;
+  background: #1c1c28;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #9090a8;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2355556a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-color: #1c1c28;
+  min-width: 180px;
+  transition: border-color 150ms ease, color 150ms ease;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.select:hover, .select:focus {
+  border-color: rgba(255,255,255,0.2);
+  color: #f0f0f5;
+}
+
+.selectActive {
+  border-color: #e63030 !important;
+  color: #e63030 !important;
+  background-color: rgba(230,48,48,0.08) !important;
+}
+
+/* ── Date tab strip ──────────────────────────────────────── */
+.dateStrip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 28px;
+  scrollbar-width: none;
+}
+
+.dateStrip::-webkit-scrollbar { display: none; }
+
+.dateTab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: #16161f;
+  min-width: 64px;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 150ms ease, background 150ms ease;
+  flex-shrink: 0;
+}
+
+.dateTab:hover {
+  border-color: rgba(255,255,255,0.2);
+  background: #1c1c28;
+}
+
+.dateTabActive {
+  background: #e63030 !important;
+  border-color: #e63030 !important;
+}
+
+.dateTabDisabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.dateTabDisabled:hover {
+  border-color: rgba(255,255,255,0.07);
+  background: #16161f;
+}
+
+.tabLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: #9090a8;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.dateTabActive .tabLabel { color: rgba(255,255,255,0.8); }
+
+.tabDay {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #f0f0f5;
+}
+
+.tabMonth {
+  font-size: 10px;
+  color: #9090a8;
+  margin-top: 1px;
+}
+
+.dateTabActive .tabMonth { color: rgba(255,255,255,0.8); }
+
+.tabDot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #e63030;
+  margin-top: 4px;
+}
+
+.dateTabActive .tabDot { background: rgba(255,255,255,0.6); }
+
+/* ── Date heading ────────────────────────────────────────── */
+.dateHeading {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f0f0f5;
+  margin: 0 0 20px;
+}
+
+.dateHeadingCount {
+  font-size: 13px;
+  font-weight: 400;
+  color: #55556a;
+  margin-left: 8px;
+}
+
+/* ── Theater group card ──────────────────────────────────── */
+.theaterCard {
+  background: #16161f;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 16px;
+}
+
+.theaterHeader {
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding-bottom: 14px;
+  margin-bottom: 18px;
+}
+
+.theaterName {
+  font-size: 17px;
+  font-weight: 600;
+  color: #f0f0f5;
+  margin: 0 0 4px;
+}
+
+.theaterLocation {
+  font-size: 12px;
+  color: #55556a;
+  margin: 0;
+}
+
+.amenities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.amenityTag {
+  font-size: 11px;
+  padding: 3px 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  color: #9090a8;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.showsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* ── States ──────────────────────────────────────────────── */
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255,255,255,0.08);
+  border-top-color: #e63030;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 12px;
+}
+
+.loadingWrap {
+  text-align: center;
+  padding: 60px 20px;
+  color: #55556a;
+  font-size: 14px;
+}
+
+.errorBox {
+  background: rgba(230,48,48,0.08);
+  border: 1px solid rgba(230,48,48,0.25);
+  color: #f87171;
+  padding: 14px 18px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.emptyBox {
+  text-align: center;
+  padding: 56px 20px;
+  background: #16161f;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  color: #55556a;
+  font-size: 14px;
+}
+
+.emptyIcon {
+  font-size: 40px;
+  margin-bottom: 12px;
+}
+
+.emptyTitle {
+  font-size: 17px;
+  font-weight: 600;
+  color: #f0f0f5;
+  margin: 0 0 8px;
+}
+
+.primaryBtn {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 10px 24px;
+  background: #e63030;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: background 150ms ease;
+}
+
+.primaryBtn:hover { background: #c91c1c; }

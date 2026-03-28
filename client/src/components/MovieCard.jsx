@@ -1,107 +1,92 @@
-function MovieCard({ movie, onSelect }) {
+// MovieCard.jsx
+import styles from './MovieCard.module.css';
+
+// Skeleton shown while movies load
+export function MovieCardSkeleton() {
   return (
-    <div
-      style={{
-        border: "1px solid #e0e0e0",
-        padding: "12px",
-        width: "180px",
-        cursor: "pointer",
-        borderRadius: "8px",
-        transition: "all 0.2s ease",
-        background: "#fff",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-      }}
-      onClick={() => onSelect(movie)}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = "translateY(-4px)";
-        e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
-      }}
-    >
-      {/* Movie Poster Placeholder */}
-      {movie.posterUrl ? (
-        <img
-          src={movie.posterUrl}
-          alt={movie.title}
-          style={{
-            width: "100%",
-            height: "220px",
-            objectFit: "cover",
-            borderRadius: "4px",
-            marginBottom: "10px",
-          }}
-        />
-      ) : (
-        <div
-          style={{
-            width: "100%",
-            height: "220px",
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-            borderRadius: "4px",
-            marginBottom: "10px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "white",
-            fontSize: "40px",
-            fontWeight: "bold",
-          }}
-        >
-          {movie.title.charAt(0).toUpperCase()}
-        </div>
-      )}
-
-      <h3
-        style={{
-          margin: "0 0 6px 0",
-          fontSize: "15px",
-          fontWeight: "bold",
-          color: "#333",
-        }}
-      >
-        {movie.title}
-      </h3>
-
-      {movie.description && (
-        <p
-          style={{
-            margin: "0 0 6px 0",
-            fontSize: "12px",
-            color: "#666",
-            lineHeight: "1.4",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-          }}
-        >
-          {movie.description}
-        </p>
-      )}
-
-      <div style={{ fontSize: "11px", color: "#888" }}>
-        {movie.duration && (
-          <p style={{ margin: "3px 0" }}>
-            <strong>Duration:</strong> {movie.duration} mins
-          </p>
-        )}
-
-        {movie.language && (
-          <p style={{ margin: "3px 0" }}>
-            <strong>Language:</strong> {movie.language}
-          </p>
-        )}
-
-        {movie.genre && movie.genre.length > 0 && (
-          <p style={{ margin: "3px 0" }}>
-            <strong>Genre:</strong> {movie.genre.join(", ")}
-          </p>
-        )}
+    <div className={styles.skeleton}>
+      <div className={styles.skeletonPoster} />
+      <div className={styles.skeletonInfo}>
+        <div className={styles.skeletonLine} style={{ width: '80%' }} />
+        <div className={styles.skeletonLine} style={{ width: '50%' }} />
       </div>
+    </div>
+  );
+}
+
+function MovieCard({ movie, onSelect }) {
+  const primaryGenres = movie.genre?.slice(0, 2) ?? [];
+
+  return (
+    <div className={styles.card} onClick={() => onSelect(movie)}>
+
+      {/* ── Poster ── */}
+      <div className={styles.posterWrap}>
+        {movie.posterUrl ? (
+          <img
+            src={movie.posterUrl}
+            alt={movie.title}
+            className={styles.poster}
+            loading="lazy"
+          />
+        ) : (
+          <div className={styles.posterFallback}>
+            <span className={styles.posterFallbackLetter}>
+              {movie.title.charAt(0).toUpperCase()}
+            </span>
+          </div>
+        )}
+
+        {/* Genre badges */}
+        {primaryGenres.length > 0 && (
+          <div className={styles.genreBadge}>
+            {primaryGenres.map((g) => (
+              <span key={g} className={styles.badge}>{g}</span>
+            ))}
+          </div>
+        )}
+
+        {/* Bottom gradient */}
+        <div className={styles.posterGradient} />
+      </div>
+
+      {/* ── Info ── */}
+      <div className={styles.info}>
+        <h3 className={styles.title}>{movie.title}</h3>
+
+        <div className={styles.meta}>
+          {movie.duration && (
+            <span className={styles.metaItem}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              {movie.duration}m
+            </span>
+          )}
+
+          {movie.duration && movie.language && (
+            <span className={styles.metaDot} />
+          )}
+
+          {movie.language && (
+            <span className={styles.metaItem}>{movie.language}</span>
+          )}
+        </div>
+      </div>
+
+      {/* ── Book bar (slides up on hover) ── */}
+      <div className={styles.bookBar}>
+        <span className={styles.bookBarText}>Book Tickets</span>
+        <span className={styles.bookBarArrow}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2.5">
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </span>
+      </div>
+
     </div>
   );
 }
