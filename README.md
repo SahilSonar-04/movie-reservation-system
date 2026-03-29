@@ -38,21 +38,21 @@ A full-stack movie ticket booking platform with real-time seat selection, Stripe
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         React SPA (Vite)                         │
+│                         React SPA (Vite)                        │
 │   Movies → Shows → Seats → CheckoutForm → BookingTicket         │
-│   AuthContext  |  axios interceptors  |  Socket.io client        │
+│   AuthContext  |  axios interceptors  |  Socket.io client       │
 └────────────┬──────────────────────────────────┬─────────────────┘
              │  HTTP / REST (axios)              │  WebSocket (ws://)
              ▼                                   ▼
 ┌────────────────────────────────────────────────────────────────┐
-│                    Node.js HTTP Server (port 5000)              │
-│                                                                  │
+│                    Node.js HTTP Server (port 5000)             │
+│                                                                │
 │  ┌──────────────────────────────────────────────────────────┐  │
-│  │                    Express App (app.js)                   │  │
-│  │                                                           │  │
+│  │                    Express App (app.js)                  │  │
+│  │                                                          │  │
 │  │  Helmet → CORS → Stripe Raw Body (webhook only)          │  │
 │  │  → express.json() → Morgan → generalLimiter              │  │
-│  │                                                           │  │
+│  │                                                          │  │
 │  │  /api/auth      authLimiter    → auth.controller         │  │
 │  │  /api/movies    adminLimiter   → movie.controller        │  │
 │  │  /api/theaters  adminLimiter   → theater.controller      │  │
@@ -64,25 +64,25 @@ A full-stack movie ticket booking platform with real-time seat selection, Stripe
 │  │  /api/admin     adminLimiter   → admin.controller        │  │
 │  │  /api/admin     adminLimiter   → tmdb.controller         │  │
 │  │  /api/health                  → inline handler           │  │
-│  │                                                           │  │
+│  │                                                          │  │
 │  │  Global error handler (ApiError / Mongoose / JWT / 500)  │  │
 │  └──────────────────────────────────────────────────────────┘  │
-│                                                                  │
+│                                                                │
 │  ┌──────────────────────────────────────────────────────────┐  │
-│  │              Socket.io Server (same port)                 │  │
+│  │              Socket.io Server (same port)                │  │
 │  │  join:show → room show:<id>                              │  │
 │  │  leave:show → leave room                                 │  │
 │  │  emit seats:updated → to room show:<id>                  │  │
 │  └──────────────────────────────────────────────────────────┘  │
-│                                                                  │
+│                                                                │
 │  setInterval(releaseExpiredLocks, LOCK_TIME_MS)  ← background  │
 └──────────────┬─────────────────────────────────────────────────┘
                │  Mongoose ODM
                ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                  MongoDB (Atlas / local replica set)             │
+│                  MongoDB (Atlas / local replica set)            │
 │  Collections: users · movies · theaters · shows · seats ·       │
-│               bookings                                           │
+│               bookings                                          │
 │  Transactions: lock, unlock, confirm booking, cancel, cascade   │
 └─────────────────────────────────────────────────────────────────┘
                │
@@ -97,7 +97,7 @@ A full-stack movie ticket booking platform with real-time seat selection, Stripe
                │  fire-and-forget (after res.json)
                ▼
 ┌──────────────────────────────────────────────────────────────┐
-│  Gmail SMTP (Nodemailer)                                      │
+│  Gmail SMTP (Nodemailer)                                     │
 │  QRCode.toBuffer(bookingId) → inline CID attachment          │
 │  HTML email with booking details + QR                        │
 └──────────────────────────────────────────────────────────────┘
