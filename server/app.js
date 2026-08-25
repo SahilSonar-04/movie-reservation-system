@@ -16,6 +16,7 @@ import theaterRoutes from "./routes/theater.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import { handleStripeWebhook } from "./controllers/payment.controller.js";
 import releaseExpiredLocks from "./utils/releaseExpiredLocks.js";
+import initMovieScheduler from "./utils/movieScheduler.js";
 import { LOCK_TIME_MS } from "./config/lock.config.js";
 import logger from "./utils/logger.js";
 import { generalLimiter } from "./middleware/rateLimit.middleware.js";
@@ -24,9 +25,32 @@ const app = express();
 
 app.use(helmet());
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://127.0.0.1:5173",
+  "http://localhost:5000",
+];
+
+if (process.env.FRONTEND_URL) {
+  process.env.FRONTEND_URL.split(",").forEach((url) => {
+    const trimmed = url.trim();
+    if (trimmed && !allowedOrigins.includes(trimmed)) {
+      allowedOrigins.push(trimmed);
+    }
+  });
+}
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman, curl, server-to-server)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin) || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`Origin ${origin} not allowed by CORS`));
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -49,6 +73,7 @@ app.use(morgan("combined", { stream: logger.stream }));
 connectDB();
 
 setInterval(releaseExpiredLocks, LOCK_TIME_MS);
+initMovieScheduler();
 
 // Rate limiting: applied once here at the app level.
 // Previously also applied inside individual route files — that caused

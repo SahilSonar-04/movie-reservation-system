@@ -47,27 +47,29 @@ function RefreshIcon({ spinning }) {
 
 /* ── Main component ─────────────────────────────────────── */
 function AdminDashboard() {
-  const [stats,    setStats]    = useState(null);
-  const [movies,   setMovies]   = useState([]);
+  const [stats, setStats] = useState(null);
+  const [syncStatus, setSyncStatus] = useState(null);
+  const [movies, setMovies] = useState([]);
   const [theaters, setTheaters] = useState([]);
-  const [shows,    setShows]    = useState([]);
-  const [loading,  setLoading]  = useState(false);
+  const [shows, setShows] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [statsRefreshing, setStatsRefreshing] = useState(false);
-  const [syncing,  setSyncing]  = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState(null);
   const [selectedMovieForShows, setSelectedMovieForShows] = useState(null);
-  const [toast,   setToast]   = useState(null);
+  const [toast, setToast] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const showsSectionRef = useRef(null);
   const autoRefreshIntervalRef = useRef(null);
 
-  const showToast  = (message, type = "success") => setToast({ message, type });
+  const showToast = (message, type = "success") => setToast({ message, type });
   const showConfirm = (message, onConfirm) => setConfirm({ message, onConfirm });
   const closeConfirm = () => setConfirm(null);
 
-  const [movieForm,  setMovieForm]  = useState({ title: "", description: "", duration: "", language: "", posterUrl: "", genre: "" });
+  const [movieForm, setMovieForm] = useState({ title: "", description: "", duration: "", language: "", posterUrl: "", genre: "" });
   const [theaterForm, setTheaterForm] = useState({ name: "", location: "", address: "", amenities: "" });
-  const [showForm,   setShowForm]   = useState({ movieId: "", theaterId: "", screen: "", startTime: "", price: "", rows: "5", seatsPerRow: "10" });
+  const [showForm, setShowForm] = useState({ movieId: "", theaterId: "", screen: "", startTime: "", price: "", rows: "5", seatsPerRow: "10" });
 
   const fetchStats = useCallback(async (silent = false) => {
     if (!silent) setStatsRefreshing(true);
@@ -82,9 +84,18 @@ function AdminDashboard() {
     }
   }, []);
 
+  const fetchSyncStatus = useCallback(async () => {
+    try {
+      const res = await api.get("/admin/sync-status");
+      setSyncStatus(res.data);
+    } catch (err) {
+      console.error("Failed to fetch sync status", err);
+    }
+  }, []);
+
   const fetchMovies = async () => {
     try {
-      const res = await api.get("/movies");
+      const res = await api.get("/movies?includeAll=true");
       setMovies(res.data.movies || res.data);
     } catch (err) { console.error(err); }
   };
@@ -105,15 +116,19 @@ function AdminDashboard() {
 
   useEffect(() => {
     fetchStats();
+    fetchSyncStatus();
     fetchMovies();
     fetchTheaters();
-    autoRefreshIntervalRef.current = setInterval(() => fetchStats(true), 30000);
+    autoRefreshIntervalRef.current = setInterval(() => {
+      fetchStats(true);
+      fetchSyncStatus();
+    }, 30000);
     return () => clearInterval(autoRefreshIntervalRef.current);
-  }, [fetchStats]);
+  }, [fetchStats, fetchSyncStatus]);
 
   const handleManualRefresh = async () => {
     setStatsRefreshing(true);
-    await Promise.all([fetchStats(), fetchMovies(), fetchTheaters()]);
+    await Promise.all([fetchStats(), fetchSyncStatus(), fetchMovies(), fetchTheaters()]);
     setStatsRefreshing(false);
     showToast("Dashboard refreshed");
   };
@@ -123,14 +138,41 @@ function AdminDashboard() {
     setSyncing(true);
     try {
       const res = await api.post("/admin/sync-movies");
-      const { moviesCreated, moviesSkipped, showsCreated } = res.data;
-      showToast(`Sync complete — ${moviesCreated} new movies, ${showsCreated} shows, ${moviesSkipped} skipped`);
-      fetchMovies(); fetchTheaters(); fetchStats();
+      const { moviesCreated, moviesUpdated, showsCreated, duplicatesMerged, moviesRemoved } = res.data;
+      showToast(
+        `Sync complete — ${moviesCreated} created, ${moviesUpdated || 0} updated, ${showsCreated} shows created` +
+        (duplicatesMerged ? `, ${duplicatesMerged} duplicates merged` : "") +
+        (moviesRemoved ? `, ${moviesRemoved} stale removed` : "")
+      );
+      fetchMovies(); fetchTheaters(); fetchStats(); fetchSyncStatus();
     } catch (err) {
       showToast(err.response?.data?.message || "TMDB sync failed", "error");
     } finally {
       setSyncing(false);
     }
+  };
+
+  /* ── Stale Movie & Duplicate Cleanup ───────────────────── */
+  const handleCleanupMovies = () => {
+    showConfirm(
+      "Clean up stale movies & duplicates?\n\nThis will remove movies with no upcoming shows (and their past unbooked shows/seats), merge duplicate movies, and clean up expired seat records.\n\nPast completed bookings will be preserved.",
+      async () => {
+        closeConfirm();
+        setCleaning(true);
+        try {
+          const res = await api.post("/admin/cleanup-movies");
+          const { moviesRemoved, duplicatesMerged, showsCleaned } = res.data;
+          showToast(
+            `Cleanup complete — ${moviesRemoved} stale movies removed, ${duplicatesMerged || 0} duplicates merged, ${showsCleaned || 0} old shows cleaned`
+          );
+          fetchMovies(); fetchStats(); fetchSyncStatus();
+        } catch (err) {
+          showToast(err.response?.data?.message || "Cleanup failed", "error");
+        } finally {
+          setCleaning(false);
+        }
+      }
+    );
   };
 
   /* ── CRUD ────────────────────────────────────────────────── */
@@ -279,9 +321,23 @@ function AdminDashboard() {
           )}
 
           <button
+            className={styles.cleanupBtn}
+            onClick={handleCleanupMovies}
+            disabled={cleaning || syncing}
+            title="Clean up movies with no upcoming shows and merge duplicate movies"
+          >
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              className={cleaning ? styles.spinning : ""}>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            {cleaning ? "Cleaning…" : "Clean Up Stale Movies"}
+          </button>
+
+          <button
             className={styles.syncBtn}
             onClick={handleTMDBSync}
-            disabled={syncing}
+            disabled={syncing || cleaning}
             title="Fetch now-playing movies from TMDB and auto-generate shows"
           >
             <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"
@@ -298,6 +354,40 @@ function AdminDashboard() {
           </button>
         </div>
       </div>
+
+      {/* ── Auto-Sync & Maintenance Status ── */}
+      {syncStatus && (
+        <div className={styles.maintenanceBanner}>
+          <div className={styles.maintenanceInfo}>
+            <div className={`${styles.statusIndicator} ${syncStatus.isRunning ? styles.statusIndicatorSyncing : ""}`}>
+              <span className={styles.statusDot} />
+              {syncStatus.isRunning ? "Auto-Sync Running" : "Auto-Sync Active"}
+            </div>
+            <div className={styles.maintenanceDetails}>
+              <div className={styles.maintenanceDetailItem}>
+                <span>Interval:</span>
+                <span className={styles.maintenanceDetailValue}>Every {syncStatus.intervalHours || 12} hours</span>
+              </div>
+              {syncStatus.nextSyncTime && (
+                <div className={styles.maintenanceDetailItem}>
+                  <span>Next Auto-Sync:</span>
+                  <span className={styles.maintenanceDetailValue}>
+                    {new Date(syncStatus.nextSyncTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              )}
+              {syncStatus.lastSyncTime && (
+                <div className={styles.maintenanceDetailItem}>
+                  <span>Last Sync:</span>
+                  <span className={styles.maintenanceDetailValue}>
+                    {new Date(syncStatus.lastSyncTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Analytics ── */}
       {stats && (
@@ -491,6 +581,15 @@ function AdminDashboard() {
                       {movie.duration && <span className={styles.entityMetaItem}>{movie.duration} mins</span>}
                       {movie.language && <span className={styles.entityMetaItem}>· {movie.language}</span>}
                       {movie.genre?.length > 0 && <span className={styles.entityMetaItem}>· {movie.genre.join(", ")}</span>}
+                      {movie.upcomingShowsCount > 0 ? (
+                        <span className={styles.showCountBadge}>
+                          ✓ {movie.upcomingShowsCount} upcoming {movie.upcomingShowsCount === 1 ? "show" : "shows"}
+                        </span>
+                      ) : (
+                        <span className={styles.staleShowBadge}>
+                          ⚠ No upcoming shows
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>

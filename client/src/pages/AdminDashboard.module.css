@@ -623,3 +623,128 @@
     color: var(--red-500);
     font-weight: 700;
 }
+
+/* ── Auto-Sync & Maintenance banner ───────────────────────── */
+.maintenanceBanner {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 24px;
+    margin-bottom: 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.maintenanceInfo {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.statusIndicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: rgba(34, 197, 94, 0.08);
+    border: 1px solid rgba(34, 197, 94, 0.25);
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4ade80;
+}
+
+.statusDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 8px #4ade80;
+}
+
+.statusIndicatorSyncing {
+    background: rgba(251, 191, 36, 0.08);
+    border-color: rgba(251, 191, 36, 0.25);
+    color: #fbbf24;
+}
+
+.statusIndicatorSyncing .statusDot {
+    background: #fbbf24;
+    box-shadow: 0 0 8px #fbbf24;
+}
+
+.maintenanceDetails {
+    display: flex;
+    gap: 20px;
+    font-size: 13px;
+    color: var(--text-muted);
+    flex-wrap: wrap;
+}
+
+.maintenanceDetailItem {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.maintenanceDetailValue {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.cleanupBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--font-body);
+    transition: all var(--duration-base);
+    background: rgba(251, 191, 36, 0.08);
+    border: 1px solid rgba(251, 191, 36, 0.25);
+    color: #fbbf24;
+}
+
+.cleanupBtn:hover:not(:disabled) {
+    background: #fbbf24;
+    color: #000;
+    border-color: #fbbf24;
+}
+
+.cleanupBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.showCountBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(34, 197, 94, 0.1);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.staleShowBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(230, 48, 48, 0.1);
+    color: #f87171;
+    border: 1px solid rgba(230, 48, 48, 0.2);
+}

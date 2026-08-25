@@ -253,30 +253,48 @@ function Seats({ show, onBack }) {
           </p>
         </div>
         <div className={styles.paymentCard}>
-          <Elements
-            stripe={stripePromise}
-            options={{
-              clientSecret,
-              appearance: {
-                theme: "night",
-                variables: {
-                  colorPrimary: "#e63030",
-                  colorBackground: "#16161f",
-                  colorText: "#f0f0f5",
-                  colorDanger: "#f87171",
-                  fontFamily: "DM Sans, sans-serif",
-                  borderRadius: "8px",
+          {!stripePromise ? (
+            <div style={{ textAlign: "center", padding: "2rem" }}>
+              <p style={{ color: "#f87171", fontWeight: 600, marginBottom: "0.5rem" }}>
+                Stripe publishable key is not configured
+              </p>
+              <p style={{ color: "#a0a0b0", fontSize: "0.9rem", marginBottom: "1.5rem" }}>
+                Please set <code>VITE_STRIPE_PUBLISHABLE_KEY</code> in <code>client/.env</code>.
+              </p>
+              <button
+                type="button"
+                className={styles.cancelBtn}
+                onClick={handlePaymentCancel}
+              >
+                Back to Seats
+              </button>
+            </div>
+          ) : (
+            <Elements
+              stripe={stripePromise}
+              options={{
+                clientSecret,
+                appearance: {
+                  theme: "night",
+                  variables: {
+                    colorPrimary: "#e63030",
+                    colorBackground: "#16161f",
+                    colorText: "#f0f0f5",
+                    colorDanger: "#f87171",
+                    fontFamily: "DM Sans, sans-serif",
+                    borderRadius: "8px",
+                  },
                 },
-              },
-            }}
-          >
-            <CheckoutForm
-              amount={totalAmount}
-              seatCount={selectedSeats.length}
-              onSuccess={handlePaymentSuccess}
-              onCancel={handlePaymentCancel}
-            />
-          </Elements>
+              }}
+            >
+              <CheckoutForm
+                amount={totalAmount}
+                seatCount={selectedSeats.length}
+                onSuccess={handlePaymentSuccess}
+                onCancel={handlePaymentCancel}
+              />
+            </Elements>
+          )}
         </div>
         <div className={styles.paymentNote}>
           Your seats are locked for 5 minutes while you complete payment.

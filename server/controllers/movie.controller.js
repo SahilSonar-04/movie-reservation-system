@@ -17,8 +17,8 @@ export const createMovie = asyncHandler(async (req, res) => {
 });
 
 export const getMovies = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 50;
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 50;
   const skip = (page - 1) * limit;
 
   const filter = {};
@@ -35,13 +35,36 @@ export const getMovies = asyncHandler(async (req, res) => {
     ];
   }
 
+  // Filter out inactive movies by default unless includeAll is true
+  if (req.query.includeAll !== "true") {
+    if (req.query.availableOnly === "true") {
+      const activeMovieIds = await Show.distinct("movie", { startTime: { $gte: new Date() } });
+      filter._id = { $in: activeMovieIds };
+    } else {
+      filter.isActive = { $ne: false };
+    }
+  }
+
   const [movies, total] = await Promise.all([
     Movie.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
     Movie.countDocuments(filter),
   ]);
 
+  // Enrich movies with count of upcoming shows
+  const movieIds = movies.map((m) => m._id);
+  const showCounts = await Show.aggregate([
+    { $match: { movie: { $in: movieIds }, startTime: { $gte: new Date() } } },
+    { $group: { _id: "$movie", count: { $sum: 1 } } },
+  ]);
+  const showCountMap = new Map(showCounts.map((sc) => [sc._id.toString(), sc.count]));
+
+  const enrichedMovies = movies.map((m) => ({
+    ...m,
+    upcomingShowsCount: showCountMap.get(m._id.toString()) || 0,
+  }));
+
   res.json({
-    movies,
+    movies: enrichedMovies,
     pagination: { page, limit, total, pages: Math.ceil(total / limit) },
   });
 });
@@ -57,14 +80,19 @@ export const deleteMovie = asyncHandler(async (req, res) => {
   const shows = await Show.find({ movie: movieId });
   const showIds = shows.map((show) => show._id);
 
-  const confirmedBookings = await Booking.countDocuments({
-    show: { $in: showIds },
+  // Check for future active confirmed bookings
+  const upcomingShowIds = shows
+    .filter((s) => new Date(s.startTime) >= new Date())
+    .map((s) => s._id);
+
+  const activeConfirmedBookings = await Booking.countDocuments({
+    show: { $in: upcomingShowIds },
     status: "CONFIRMED",
   });
 
-  if (confirmedBookings > 0) {
+  if (activeConfirmedBookings > 0) {
     return res.status(400).json({
-      message: `Cannot delete movie. There are ${confirmedBookings} confirmed bookings for shows of this movie.`,
+      message: `Cannot delete movie. There are ${activeConfirmedBookings} active upcoming bookings for shows of this movie.`,
     });
   }
 

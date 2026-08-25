@@ -25,7 +25,7 @@ function Movies() {
       try {
         setError("");
         const [moviesRes, locationsRes] = await Promise.all([
-          api.get("/movies"),
+          api.get("/movies?availableOnly=true"),
           api.get("/theaters/locations"),
         ]);
         const moviesData = moviesRes.data.movies || moviesRes.data;

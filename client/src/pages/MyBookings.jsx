@@ -57,10 +57,10 @@ function MyBookings() {
 
   const now = new Date();
   const upcomingBookings = bookings.filter(
-    (b) => b.status === "CONFIRMED" && new Date(b.show.startTime) > now
+    (b) => b.status === "CONFIRMED" && b.show && new Date(b.show.startTime) > now
   );
   const pastBookings = bookings.filter(
-    (b) => b.status === "CANCELLED" || new Date(b.show.startTime) <= now
+    (b) => b.status === "CANCELLED" || !b.show || new Date(b.show.startTime) <= now
   );
   const displayedBookings = activeTab === "upcoming" ? upcomingBookings : pastBookings;
 
@@ -130,8 +130,8 @@ function MyBookings() {
       <div className={styles.list}>
         {displayedBookings.map((b, idx) => {
           const isConfirmed = b.status === "CONFIRMED";
-          const showDate    = new Date(b.show.startTime);
-          const isPastShow  = showDate < now;
+          const showDate    = b.show?.startTime ? new Date(b.show.startTime) : new Date(b.createdAt);
+          const isPastShow  = !b.show || showDate < now;
 
           return (
             <div
@@ -141,7 +141,7 @@ function MyBookings() {
             >
               {/* Card header */}
               <div className={`${styles.cardHeader} ${isConfirmed && !isPastShow ? styles.cardHeaderConfirmed : ""}`}>
-                <h3 className={styles.movieTitle}>{b.show.movie.title}</h3>
+                <h3 className={styles.movieTitle}>{b.show?.movie?.title || "Movie Show"}</h3>
                 <div className={styles.badges}>
                   <span className={`${styles.statusBadge} ${isConfirmed ? styles.statusConfirmed : styles.statusCancelled}`}>
                     {b.status}
@@ -159,8 +159,8 @@ function MyBookings() {
                 <div className={styles.detailsGrid}>
                   <div className={styles.detailItem}>
                     <div className={styles.detailLabel}>Theater</div>
-                    <div className={styles.detailValue}>{b.show.theater.name}</div>
-                    <div className={styles.detailSub}>{b.show.screen}</div>
+                    <div className={styles.detailValue}>{b.show?.theater?.name || "Theater"}</div>
+                    <div className={styles.detailSub}>{b.show?.screen || "Screen"}</div>
                   </div>
 
                   <div className={styles.detailItem}>
