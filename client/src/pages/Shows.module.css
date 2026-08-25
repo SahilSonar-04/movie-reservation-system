@@ -332,3 +332,72 @@
 }
 
 .primaryBtn:hover { background: #c91c1c; }
+
+/* ── Mobile Responsive Queries ───────────────────────────── */
+@media (max-width: 768px) {
+  .backBtn {
+    padding: 7px 14px;
+    margin-bottom: 20px;
+    font-size: 13px;
+  }
+
+  .movieHeader {
+    gap: 14px;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+  }
+
+  .moviePoster {
+    width: 68px;
+    height: 102px;
+    border-radius: 6px;
+  }
+
+  .movieTitle {
+    font-size: 28px;
+    margin-bottom: 6px;
+  }
+
+  .movieDesc {
+    font-size: 13px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .dateStrip {
+    margin-bottom: 20px;
+    gap: 6px;
+    padding-bottom: 6px;
+  }
+
+  .dateTab {
+    padding: 8px 12px;
+    min-width: 56px;
+  }
+
+  .tabDay {
+    font-size: 19px;
+  }
+
+  .theaterCard {
+    padding: 16px 14px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+  }
+
+  .theaterHeader {
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+  }
+
+  .theaterName {
+    font-size: 15px;
+  }
+
+  .showsRow {
+    gap: 8px;
+  }
+}

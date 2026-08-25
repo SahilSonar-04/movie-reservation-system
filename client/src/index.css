@@ -65,12 +65,20 @@
 }
 
 /* ── Reset ───────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
 
 html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   background: #0a0a0f;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -81,6 +89,7 @@ body {
   color: var(--text-primary);
   line-height: 1.6;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 /* Ensure React root fills the page */
@@ -88,22 +97,36 @@ body {
   min-height: 100vh;
   background: #0a0a0f;
   background: var(--bg);
+  display: flex;
+  flex-direction: column;
 }
 
-img { display: block; max-width: 100%; }
+img { display: block; max-width: 100%; height: auto; }
 
-a { color: inherit; text-decoration: none; }
+a {
+  color: inherit;
+  text-decoration: none;
+  touch-action: manipulation;
+}
 
 button {
   font-family: var(--font-body);
   cursor: pointer;
   border: none;
   background: none;
+  touch-action: manipulation;
+  user-select: none;
 }
 
 input, select, textarea {
   font-family: var(--font-body);
   color: var(--text-primary);
+}
+
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important; /* Prevents unwanted auto-zoom on iOS */
+  }
 }
 
 /* ── Scrollbar ───────────────────────────────────────────── */

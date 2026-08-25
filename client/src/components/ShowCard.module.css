@@ -94,3 +94,30 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+
+/* ── Mobile Responsive Queries ───────────────────────────── */
+@media (max-width: 768px) {
+  .card {
+    padding: 10px 12px;
+    min-width: 110px;
+  }
+
+  .card:active:not(.cardPast) {
+    transform: scale(0.97);
+    border-color: #e63030;
+    background: rgba(230, 48, 48, 0.12);
+  }
+
+  .time {
+    font-size: 16px;
+  }
+
+  .screen {
+    font-size: 12px;
+  }
+
+  .price {
+    font-size: 12px;
+    padding: 2px 6px;
+  }
+}

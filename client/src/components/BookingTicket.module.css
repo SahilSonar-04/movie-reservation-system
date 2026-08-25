@@ -284,3 +284,55 @@
   border-color: var(--border-hover);
   color: var(--text-primary);
 }
+
+/* ── Mobile Responsive Queries ───────────────────────────── */
+@media (max-width: 768px) {
+  .backdrop {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .ticket {
+    max-height: 92vh;
+    overflow-y: auto;
+    border-radius: 16px 16px 12px 12px;
+  }
+
+  .header {
+    padding: 20px 20px 24px;
+  }
+
+  .movieTitle {
+    font-size: 22px;
+  }
+
+  .body {
+    padding: 20px 20px 18px;
+  }
+
+  .detailsGrid {
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .qrBox {
+    padding: 12px;
+    gap: 14px;
+  }
+
+  .qrCanvas {
+    width: 80px !important;
+    height: 80px !important;
+  }
+
+  .actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .printBtn,
+  .closeActionBtn {
+    width: 100%;
+    padding: 12px;
+  }
+}

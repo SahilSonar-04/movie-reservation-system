@@ -159,6 +159,73 @@
   background: var(--red-600);
 }
 
+/* ── Mobile Menu Toggle ──────────────────────────────────── */
+.menuToggle {
+  display: none;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  color: var(--text-primary);
+  z-index: 102;
+  transition: background var(--duration-fast), border-color var(--duration-fast);
+}
+
+.menuToggle:active {
+  transform: scale(0.95);
+}
+
+.hamburger {
+  position: relative;
+  width: 18px;
+  height: 2px;
+  background: var(--text-primary);
+  transition: all var(--duration-fast);
+}
+
+.hamburger::before,
+.hamburger::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 18px;
+  height: 2px;
+  background: var(--text-primary);
+  transition: all var(--duration-fast);
+}
+
+.hamburger::before {
+  top: -6px;
+}
+
+.hamburger::after {
+  bottom: -6px;
+}
+
+.hamburgerActive {
+  background: transparent;
+}
+
+.hamburgerActive::before {
+  top: 0;
+  transform: rotate(45deg);
+  background: var(--red-500);
+}
+
+.hamburgerActive::after {
+  bottom: 0;
+  transform: rotate(-45deg);
+  background: var(--red-500);
+}
+
+.navBackdrop {
+  display: none;
+}
+
 /* ── Main content ────────────────────────────────────────── */
 .main {
   flex: 1;
@@ -185,4 +252,107 @@
   font-size: 12px;
   color: var(--text-muted);
   opacity: 0.5;
+}
+
+/* ── Mobile Responsive Queries ───────────────────────────── */
+@media (max-width: 768px) {
+  .header {
+    height: 58px;
+  }
+
+  .headerInner {
+    padding: 0 var(--space-4);
+  }
+
+  .logo {
+    font-size: 24px;
+    letter-spacing: 2px;
+  }
+
+  .menuToggle {
+    display: flex;
+  }
+
+  .navBackdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    z-index: 99;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-base) var(--ease-out);
+  }
+
+  .navBackdropOpen {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .nav {
+    position: fixed;
+    top: 58px;
+    left: 0;
+    right: 0;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border);
+    padding: var(--space-4) var(--space-5) var(--space-6);
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6);
+    z-index: 101;
+    transform: translateY(-110%);
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      transform var(--duration-base) var(--ease-out),
+      opacity var(--duration-base) var(--ease-out);
+  }
+
+  .navOpen {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .navLink {
+    padding: 12px 16px;
+    font-size: 15px;
+    border-radius: var(--radius-md);
+  }
+
+  .navDivider {
+    width: 100%;
+    height: 1px;
+    margin: var(--space-2) 0;
+  }
+
+  .userName {
+    padding: var(--space-2) var(--space-3);
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .signOutBtn,
+  .signInBtn,
+  .signUpBtn {
+    width: 100%;
+    text-align: center;
+    padding: 12px 16px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .main {
+    padding: var(--space-5) var(--space-4);
+  }
+
+  .footer {
+    padding: var(--space-6) var(--space-4);
+  }
 }

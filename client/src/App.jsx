@@ -1,4 +1,4 @@
-// App.jsx
+import { useState, useEffect } from "react";
 import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
 import Movies from "./pages/Movies";
 import Login from "./pages/Login";
@@ -11,6 +11,12 @@ import styles from "./App.module.css";
 function App() {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Close mobile menu whenever location changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
 
   const isActive = (path) =>
     path === "/"
@@ -19,21 +25,49 @@ function App() {
 
   return (
     <div className={styles.shell}>
-
       {/* ── Header ── */}
       <header className={styles.header}>
         <div className={styles.headerInner}>
-
           {/* Logo */}
           <Link to="/" className={styles.logo}>
             CINE<span className={styles.logoAccent}>BOOK</span>
           </Link>
 
+          {/* Mobile Menu Button */}
+          <button
+            className={styles.menuToggle}
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+            aria-label="Toggle navigation menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            <span
+              className={`${styles.hamburger} ${
+                mobileMenuOpen ? styles.hamburgerActive : ""
+              }`}
+            />
+          </button>
+
+          {/* Mobile Backdrop */}
+          <div
+            className={`${styles.navBackdrop} ${
+              mobileMenuOpen ? styles.navBackdropOpen : ""
+            }`}
+            onClick={() => setMobileMenuOpen(false)}
+          />
+
           {/* Nav */}
-          <nav className={styles.nav}>
+          <nav
+            className={`${styles.nav} ${
+              mobileMenuOpen ? styles.navOpen : ""
+            }`}
+          >
             <Link
               to="/"
-              className={`${styles.navLink} ${isActive("/") && location.pathname === "/" ? styles.navLinkActive : ""}`}
+              className={`${styles.navLink} ${
+                isActive("/") && location.pathname === "/"
+                  ? styles.navLinkActive
+                  : ""
+              }`}
             >
               Movies
             </Link>
@@ -42,7 +76,9 @@ function App() {
               <>
                 <Link
                   to="/my-bookings"
-                  className={`${styles.navLink} ${isActive("/my-bookings") ? styles.navLinkActive : ""}`}
+                  className={`${styles.navLink} ${
+                    isActive("/my-bookings") ? styles.navLinkActive : ""
+                  }`}
                 >
                   My Bookings
                 </Link>
@@ -50,7 +86,9 @@ function App() {
                 {user.role === "ADMIN" && (
                   <Link
                     to="/admin"
-                    className={`${styles.navLink} ${isActive("/admin") ? styles.navLinkActive : ""}`}
+                    className={`${styles.navLink} ${
+                      isActive("/admin") ? styles.navLinkActive : ""
+                    }`}
                   >
                     Admin
                   </Link>
@@ -70,7 +108,9 @@ function App() {
               <>
                 <Link
                   to="/login"
-                  className={`${styles.signInBtn} ${isActive("/login") ? styles.navLinkActive : ""}`}
+                  className={`${styles.signInBtn} ${
+                    isActive("/login") ? styles.navLinkActive : ""
+                  }`}
                 >
                   Sign In
                 </Link>

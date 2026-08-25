@@ -494,3 +494,114 @@
 }
 
 .modalDismiss:hover { color: #9090a8; }
+
+/* ── Mobile Responsive Queries ───────────────────────────── */
+@media (max-width: 768px) {
+  .page {
+    padding-bottom: 110px;
+  }
+
+  .backBtn {
+    padding: 7px 14px;
+    margin-bottom: 16px;
+    font-size: 13px;
+  }
+
+  .infoCard {
+    padding: 14px 16px;
+    margin-bottom: 18px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .infoTitle {
+    font-size: 24px;
+    margin-bottom: 6px;
+  }
+
+  .infoMeta {
+    gap: 12px;
+    font-size: 12px;
+  }
+
+  .legend {
+    gap: 12px 16px;
+    padding: 10px 14px;
+    margin-bottom: 20px;
+  }
+
+  .legendItem {
+    font-size: 11px;
+    gap: 6px;
+  }
+
+  .legendSwatch {
+    width: 16px;
+    height: 16px;
+  }
+
+  .screenWrap {
+    margin-bottom: 24px;
+  }
+
+  .screen {
+    max-width: 280px;
+    padding: 10px;
+  }
+
+  .gridWrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 10px 16px;
+    margin-bottom: 24px;
+    justify-content: flex-start;
+    scrollbar-width: none;
+  }
+
+  .gridWrap::-webkit-scrollbar {
+    display: none;
+  }
+
+  .bookingBar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-radius: 16px 16px 0 0;
+    z-index: 95;
+    background: rgba(22, 22, 31, 0.96);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.6);
+    padding: 14px 20px max(14px, env(safe-area-inset-bottom));
+  }
+
+  .totalAmount {
+    font-size: 26px;
+  }
+
+  .payBtn,
+  .signInBtn {
+    padding: 11px 22px;
+    font-size: 14px;
+  }
+
+  .payBtn:active:not(:disabled),
+  .signInBtn:active {
+    transform: scale(0.96);
+  }
+
+  .paymentHeader,
+  .paymentCard {
+    padding: 16px 18px;
+    border-radius: 10px;
+  }
+
+  .modal {
+    padding: 24px 20px;
+    border-radius: 12px;
+  }
+}

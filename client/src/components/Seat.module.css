@@ -74,3 +74,37 @@
 .selectedBase {
   background: rgba(230, 48, 48, 0.4);
 }
+
+/* ── Mobile Responsive Queries ───────────────────────────── */
+@media (max-width: 768px) {
+  .seat {
+    width: 33px;
+    height: 33px;
+    font-size: 9px;
+    border-radius: 5px 5px 2px 2px;
+  }
+
+  .available:active {
+    transform: scale(0.92);
+    background: #3a3a54;
+  }
+
+  .selected:active {
+    transform: scale(0.92);
+  }
+
+  .base {
+    bottom: -2px;
+    left: 4px;
+    right: 4px;
+    height: 2px;
+  }
+}
+
+@media (max-width: 480px) {
+  .seat {
+    width: 29px;
+    height: 29px;
+    font-size: 8px;
+  }
+}

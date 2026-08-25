@@ -140,3 +140,27 @@
   justify-content: center;
   gap: 5px;
 }
+
+/* ── Mobile Responsive Queries ───────────────────────────── */
+@media (max-width: 768px) {
+  .actions {
+    flex-direction: column-reverse;
+    gap: 10px;
+  }
+
+  .cancelBtn,
+  .payBtn {
+    width: 100%;
+    padding: 13px;
+    font-size: 14.5px;
+  }
+
+  .payBtn:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  .summary {
+    padding: 14px;
+    margin-bottom: 18px;
+  }
+}

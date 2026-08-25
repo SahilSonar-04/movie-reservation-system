@@ -408,3 +408,70 @@
     color: var(--text-muted);
     text-align: center;
 }
+
+/* ── Mobile Responsive Queries ───────────────────────────── */
+@media (max-width: 768px) {
+    .heading {
+        font-size: 32px;
+    }
+
+    .subheading {
+        font-size: 14px;
+    }
+
+    .tabs {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .tab {
+        justify-content: center;
+        padding: 9px 12px;
+        font-size: 13px;
+    }
+
+    .cardHeader {
+        padding: 14px 16px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .badges {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .movieTitle {
+        font-size: 16px;
+    }
+
+    .cardBody {
+        padding: 16px;
+    }
+
+    .detailsGrid {
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-bottom: 16px;
+    }
+
+    .detailLabel {
+        font-size: 10px;
+    }
+
+    .detailValue {
+        font-size: 13.5px;
+    }
+
+    .totalAmount {
+        font-size: 22px;
+    }
+
+    .cancelBtn {
+        width: 100%;
+        padding: 11px;
+        text-align: center;
+    }
+}
